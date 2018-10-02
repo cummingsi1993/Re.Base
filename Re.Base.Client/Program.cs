@@ -25,31 +25,13 @@ namespace Re.Base.Client
             var persons = StorageBuilder.CreateFileBasedStorage("D:\\Temp\\ReBase")
                 .GetDbSet<Person>();
 
-            var name = "Isaac";
 
-            persons.Add(new Person() { FirstName = "Michael", LastName = "Jordan", DateOfBirth = DateTime.Now });
+			var people = (from Person person in persons
+						  from string tag in person.Tags
+						  where tag == "ipsum"
+						  select tag).ToList();
 
-            var stuff = (from Person person in persons
-                         where person.LastName.StartsWith("Cummings")
-                         select new
-                         {
-                             person.FirstName,
-                             person.LastName,
-                             CurrentDate = DateTime.Now
-                         }).ToList();
-
-            var otherStuff = (from Person person in persons
-                              select person).ToList();
-
-            //var stuff = persons.Where(p => p.FirstName == name).ToList();
-
-            foreach(var p in stuff)
-            {
-                Console.WriteLine(p.FirstName);
-            }
-
-
-
+			
 
             Console.ReadLine();
           
@@ -60,9 +42,17 @@ namespace Re.Base.Client
 
 
 
-        public static async Task SetupSomeData(FileDatabase database)
+        public static async Task SetupSomeData(DbSet<Person> persons)
         {
+			string sample_data = System.IO.File.ReadAllText("D:\\Temp\\ReBase\\sample_people.json");
 
-        }
-    }
+			var people = Newtonsoft.Json.JsonConvert.DeserializeObject<Person[]>(sample_data);
+
+			foreach (Person person in people)
+			{
+				persons.Add(person);
+			}
+
+		}
+	}
 }

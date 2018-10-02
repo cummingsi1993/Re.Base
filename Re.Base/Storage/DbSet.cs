@@ -20,6 +20,28 @@ namespace Re.Base.Storage
             this.databaseLocation = databaseLocation;
         }
 
+		public void AddRange(IEnumerable<TModel> models)
+		{
+			string sourceName = typeof(TModel).Name;
+			string fileName = $"{databaseLocation}/data_{sourceName}.rbs";
+
+			List<string> serializedModels = new List<string>();
+
+			foreach (TModel model in models)
+			{
+				DbRecord<TModel> record = new DbRecord<TModel>(model);
+
+				string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(record);
+				serializedModels.Add(serializedModel);
+			}
+
+			if (!System.IO.File.Exists(fileName))
+			{
+				System.IO.File.Create(fileName).Close();
+			}
+
+			System.IO.File.AppendAllLines(fileName, serializedModels);
+		}
 
         public void Add(TModel model)
         {
@@ -28,12 +50,7 @@ namespace Re.Base.Storage
 
             DbRecord<TModel> record = new DbRecord<TModel>(model);
 
-            //string serializedModel = Json.JsonParser.Serialize(record);
-            string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(record);
-            //serializer.Serialize()
-
-            //byte[] serializedBytes = Encoding.ASCII.GetBytes(serializedModel);
-
+			string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(record);
 
             if (!System.IO.File.Exists(fileName))
             {

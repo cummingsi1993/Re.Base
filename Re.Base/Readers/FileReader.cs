@@ -26,10 +26,49 @@ namespace Re.Base.Readers
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            throw new NotImplementedException();
+            return new Enumerator(fileName, query);
         }
 
+        internal TModel FindById(long recordNumber)
+        {
 
+            System.IO.StreamReader stream = System.IO.File.OpenText(fileName);
+            long lineNumber = 0;
+            while (lineNumber < (recordNumber - 1))
+            {
+                stream.ReadLine();
+                lineNumber++;
+            }
+            
+            using (IEnumerator<TModel> enumerator = new Enumerator(stream, query))
+            {
+                enumerator.MoveNext();
+                return enumerator.Current;
+            }
+            
+        }
+
+        internal TModel FindById(Guid recordId)
+        {
+
+            System.IO.StreamReader stream = System.IO.File.OpenText(fileName);
+
+            using (Enumerator enumerator = new Enumerator(stream, query))
+            {
+                if (enumerator.MoveToId(recordId))
+                {
+                    enumerator.MoveNext();   
+                    return enumerator.Current;
+                }
+                else
+                {
+                    //TODO create exceptions
+                    throw new InvalidOperationException();
+                }
+                
+            }
+
+        }
 
         class Enumerator : IEnumerator<TModel>, IEnumerator, IDisposable
         {
@@ -39,6 +78,16 @@ namespace Re.Base.Readers
             Queryables.RebaseQuery query;
             TModel current;
 
+            public Enumerator(System.IO.StreamReader stream, Queryables.RebaseQuery query)
+            {
+                this.stream = stream;
+                serializer = new Newtonsoft.Json.JsonSerializer();
+
+                reader = new Newtonsoft.Json.JsonTextReader(stream);
+                reader.SupportMultipleContent = true;
+
+                this.query = query;
+            }
 
             public Enumerator(string fileName, Queryables.RebaseQuery query)
             {
@@ -51,28 +100,50 @@ namespace Re.Base.Readers
                 this.query = query;
             }
 
-            TModel IEnumerator<TModel>.Current { get { return current; } }
-
-            object IEnumerator.Current { get { return current; } }
-
-            bool IEnumerator.MoveNext()
+            public Guid? MoveToNextId()
             {
                 bool shouldContinue = true;
 
                 while (shouldContinue)
                 {
-                    //we have reached the end of the file.
-                    if (!this.reader.Read())
-                    {
-                        return false;
-                    }
+                    shouldContinue = reader.Read();
 
                     if (reader.Value?.ToString() == "Id")
                     {
-                        //Unused... this may be used for indexes.
                         var id = reader.ReadAsString();
+                        return new Guid(id);
                     }
+                }
+                //A null id means we have reached EOF
+                return null;
+            }
 
+            public bool MoveToId(Guid id)
+            {
+                Guid? currentId = MoveToNextId();
+                while (currentId.HasValue)
+                {
+                    currentId = MoveToNextId();
+
+                    if (currentId == id)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public TModel Current { get { return current; } }
+
+            object IEnumerator.Current { get { return current; } }
+
+            public bool MoveNext()
+            {
+                Guid? currentId = this.MoveToNextId();
+                while (currentId.HasValue)
+                {
+                    reader.Read();
                     if (reader.Value?.ToString() == "Model")
                     {
                         reader.Read();
@@ -82,14 +153,15 @@ namespace Re.Base.Readers
                         if (query.ApplyFilter(model))
                         {
                             this.current = (TModel)query.ApplyProjection(model);
-                            shouldContinue = false;
+                            return true;
                         }
                     }
 
-                    
 
+                    currentId = this.MoveToNextId();
                 }
-                return true;
+
+                return false;
             }
 
             void IEnumerator.Reset()
@@ -107,6 +179,8 @@ namespace Re.Base.Readers
                     if (disposing)
                     {
                         // TODO: dispose managed state (managed objects).
+                        stream.Close();
+                        stream.Dispose();
                     }
 
                     // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.

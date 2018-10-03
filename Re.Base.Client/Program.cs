@@ -25,13 +25,17 @@ namespace Re.Base.Client
             var persons = StorageBuilder.CreateFileBasedStorage("D:\\Temp\\ReBase")
                 .GetDbSet<Person>();
 
+            //await SetupSomeData(persons);
 
 			var people = (from Person person in persons
-						  from string tag in person.Tags
-						  where tag == "ipsum"
-						  select tag).ToList();
+						  where person.Tags.Contains("ipsum")
+						  select person.Tags).ToList();
 
-			
+            var peopleThatHaveIpsumTwice = (from Person person in persons
+                                            where person.Tags.Count(x => x == "ipsum") > 1
+                                            select person).ToList();
+
+            var p = persons.Find(new Guid("932c9159-f8b7-42ce-8a18-3e6388ace0d3"));
 
             Console.ReadLine();
           

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Re.Base.Models;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -8,6 +9,9 @@ namespace Re.Base.Readers
     internal class FileReader<TModel> : IEnumerable<TModel>, IEnumerable
     {
 
+        //Maximum block size in bytes
+        private long _maxBlockSize = 8000;
+        
         private string fileName;
         Queryables.RebaseQuery query;
 
@@ -55,6 +59,7 @@ namespace Re.Base.Readers
 
             using (Enumerator enumerator = new Enumerator(stream, query))
             {
+                enumerator.MoveToBlock(0);
                 if (enumerator.MoveToId(recordId))
                 {
                     enumerator.MoveNext();   
@@ -76,7 +81,9 @@ namespace Re.Base.Readers
             System.IO.StreamReader stream;
             Newtonsoft.Json.JsonTextReader reader;
             Queryables.RebaseQuery query;
-            TModel current;
+
+            BlockHeader currentBlock;
+            FileHeader file;
 
             public Enumerator(System.IO.StreamReader stream, Queryables.RebaseQuery query)
             {
@@ -87,6 +94,8 @@ namespace Re.Base.Readers
                 reader.SupportMultipleContent = true;
 
                 this.query = query;
+
+                this.ReadFileHeader();
             }
 
             public Enumerator(string fileName, Queryables.RebaseQuery query)
@@ -98,6 +107,31 @@ namespace Re.Base.Readers
                 reader.SupportMultipleContent = true;
 
                 this.query = query;
+
+                this.ReadFileHeader();
+            }
+
+            private void ReadFileHeader()
+            {
+                byte[] header = new byte[1];
+                byte[] blockCountBytes = new byte[8];
+
+                stream.BaseStream.Read(header, 0, 1);
+                stream.BaseStream.Read(blockCountBytes, 0, 8);
+
+                //The file header is corrupt
+                if (header[0] != 0x000A)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                //if (BitConverter.IsLittleEndian)
+                //{
+                //    Array.Reverse(blockCountBytes);
+                //}
+
+                long blockCount = BitConverter.ToInt64(blockCountBytes, 0);
+                file = new FileHeader() { BlocksInFile = blockCount };
             }
 
             public Guid? MoveToNextId()
@@ -107,7 +141,7 @@ namespace Re.Base.Readers
                 while (shouldContinue)
                 {
                     shouldContinue = reader.Read();
-
+                    
                     if (reader.Value?.ToString() == "Id")
                     {
                         var id = reader.ReadAsString();
@@ -134,9 +168,9 @@ namespace Re.Base.Readers
                 return false;
             }
 
-            public TModel Current { get { return current; } }
+            public TModel Current { get; private set; }
 
-            object IEnumerator.Current { get { return current; } }
+            object IEnumerator.Current { get { return Current; } }
 
             public bool MoveNext()
             {
@@ -152,7 +186,7 @@ namespace Re.Base.Readers
 
                         if (query.ApplyFilter(model))
                         {
-                            this.current = (TModel)query.ApplyProjection(model);
+                            this.Current = (TModel)query.ApplyProjection(model);
                             return true;
                         }
                     }
@@ -168,6 +202,16 @@ namespace Re.Base.Readers
             {
                 
             }
+
+            public bool MoveToBlock(long blockSequence)
+            {
+                BlockHeader header = serializer.Deserialize<BlockHeader>(reader);
+                
+
+                //Read block
+                return true;
+            }
+
 
             #region IDisposable Support
             private bool disposedValue = false; // To detect redundant calls

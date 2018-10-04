@@ -2,8 +2,10 @@
 using Re.Base.Models;
 using Re.Base.Queryables.File;
 using Re.Base.Readers;
+using Re.Base.Writers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -46,25 +48,15 @@ namespace Re.Base.Storage
 
 		public void AddRange(IEnumerable<TModel> models)
 		{
-			string sourceName = typeof(TModel).Name;
-			string fileName = $"{databaseLocation}/data_{sourceName}.rbs";
+			FileWriter<TModel> writer = new FileWriter<TModel>(databaseLocation);
 
 			List<string> serializedModels = new List<string>();
 
 			foreach (TModel model in models)
 			{
-				DbRecord<TModel> record = new DbRecord<TModel>(model);
-
-				string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(record);
-				serializedModels.Add(serializedModel);
+                writer.WriteNewModel(model);
 			}
 
-			if (!System.IO.File.Exists(fileName))
-			{
-				System.IO.File.Create(fileName).Close();
-			}
-
-			System.IO.File.AppendAllLines(fileName, serializedModels);
 		}
 
         public void Add(TModel model)
@@ -84,6 +76,9 @@ namespace Re.Base.Storage
             System.IO.File.AppendAllLines(fileName, new string[] { serializedModel });
 
         }
+
+
+        
 
     }
 }

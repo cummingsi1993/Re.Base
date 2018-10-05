@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Re.Base.Readers
@@ -15,12 +16,15 @@ namespace Re.Base.Readers
         private string fileName;
         Queryables.RebaseQuery query;
 
+        DataManager dataManager;
+
         public FileReader(string fileLocation, Queryables.RebaseQuery query)
         {
             string sourceName = query.GetSourceType().Name;
             fileName = $"{fileLocation}/data_{sourceName}.rbs";
 
             this.query = query;
+            dataManager = new DataManager();
         }
 
         IEnumerator<TModel> IEnumerable<TModel>.GetEnumerator()
@@ -54,24 +58,15 @@ namespace Re.Base.Readers
 
         internal TModel FindById(Guid recordId)
         {
+            FileStream stream = File.Open(fileName, FileMode.Open);
+            BlockHeader block = dataManager.ReadBlockHeader(stream, 0);
 
-            System.IO.StreamReader stream = System.IO.File.OpenText(fileName);
+            RecordHeader[] records = dataManager.ReadRecordsInBlock(stream, 0, 1);
+            byte[] recordBytes = dataManager.ReadFullRecord(stream, 0, records, 0);
 
-            using (Enumerator enumerator = new Enumerator(stream, query))
-            {
-                enumerator.MoveToBlock(0);
-                if (enumerator.MoveToId(recordId))
-                {
-                    enumerator.MoveNext();   
-                    return enumerator.Current;
-                }
-                else
-                {
-                    //TODO create exceptions
-                    throw new InvalidOperationException();
-                }
-                
-            }
+            string serializedRecord = Encoding.UTF8.GetString(recordBytes);
+            TModel record = Newtonsoft.Json.JsonConvert.DeserializeObject<TModel>(serializedRecord);
+            return record;
 
         }
 

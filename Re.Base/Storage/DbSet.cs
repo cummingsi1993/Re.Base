@@ -62,9 +62,9 @@ namespace Re.Base.Storage
             string sourceName = typeof(TModel).Name;
             string fileName = $"{databaseLocation}/data_{sourceName}.rbs";
 
-            DbRecord<TModel> record = new DbRecord<TModel>(model);
+            
 
-			string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(record);
+			string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
 
             if (!System.IO.File.Exists(fileName))
             {

@@ -50,8 +50,6 @@ namespace Re.Base.Storage
 		{
 			FileWriter<TModel> writer = new FileWriter<TModel>(databaseLocation);
 
-			List<string> serializedModels = new List<string>();
-
 			foreach (TModel model in models)
 			{
                 writer.WriteNewModel(model);

@@ -205,7 +205,7 @@ namespace Re.Base.Readers
 
             public bool MoveToBlock(long blockSequence)
             {
-                BlockHeader header = serializer.Deserialize<BlockHeader>(reader);
+                
                 
 
                 //Read block

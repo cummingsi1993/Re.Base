@@ -28,16 +28,16 @@ namespace Re.Base
         {
             //Set position to the beginning of the stream.
             stream.Position = 0;
-
-            //This is a token byte to assure the processor this is a correct file.
-            stream.WriteByte(FileBeginToken);
+            
             byte[] bytes = new byte[FileHeaderLength];
-            BitConverter.GetBytes((long)header.BlocksInFile).CopyTo(bytes, 0);
+            //This is a token byte to assure the processor this is a correct file.
+            bytes[0] = FileBeginToken;
+            BitConverter.GetBytes((long)header.BlocksInFile).CopyTo(bytes, 1);
             //I havent decided what else needs to be in the header yet...so we will fill it up with blank space.
-            FillArray(bytes, FileHeaderLength, 8);
+            FillArray(bytes, FileHeaderLength, 9);
             stream.Write(bytes, 0, FileHeaderLength);
 
-            fileHeader = new FileHeader() { BlocksInFile = 0 };
+            fileHeader = header;
         }
 
         public FileHeader ReadFileHeader(FileStream stream)
@@ -77,9 +77,15 @@ namespace Re.Base
             return bytes;
         }
 
-        public void WriteBlockHeader(FileStream stream)
+        public void WriteBlockHeader(FileStream stream, BlockHeader header)
         {
+            JumpToBlockHeader(stream, header.BlockSequence);
 
+            byte[] bytes = new byte[BlockHeaderLength];
+            bytes[0] = BlockBeginToken;
+            BitConverter.GetBytes(header.BlockSequence).CopyTo(bytes, 1);
+            BitConverter.GetBytes(header.FreeBytes).CopyTo(bytes, 9);
+            stream.Write(bytes, 0, BlockHeaderLength);
         }
 
         public void WriteNewBlock(FileStream stream)
@@ -88,12 +94,9 @@ namespace Re.Base
             WriteFileHeader(stream, this.fileHeader);
 
             //Jump to the end of the stream;
-            stream.Position = stream.Length - 1;
             BlockHeader header = new BlockHeader() { BlockFragmented = false, BlockSequence = fileHeader.BlocksInFile, FreeBytes = BlockLength };
-
-            stream.WriteByte(BlockBeginToken);
-            stream.Write(BitConverter.GetBytes(header.BlockSequence), 0, 8);
-            stream.Write(BitConverter.GetBytes(header.FreeBytes), 0, 8);
+            WriteBlockHeader(stream, header);
+            
             stream.Write(new byte[BlockLength], 0, BlockLength);
         }
 
@@ -161,10 +164,15 @@ namespace Re.Base
             return record;
         }
 
-        public void WriteRecordToBlock(FileStream stream, BlockHeader block, byte[] bytes)
+        public void WriteRecordToBlock(FileStream stream, long blockSequence, byte[] bytes)
         {
-            JumpToBlock(stream, block.BlockSequence);
-            long firstAvailableByte = BlockLength - block.FreeBytes;
+
+            BlockHeader header = ReadBlockHeader(stream, blockSequence);
+            header.FreeBytes -= (bytes.Length + RecordHeaderLength);
+
+            WriteBlockHeader(stream, header);
+                        
+            long firstAvailableByte = BlockLength - header.FreeBytes;
             stream.Position += firstAvailableByte;
 
             byte[] headerBytes = new byte[RecordHeaderLength];
@@ -176,10 +184,6 @@ namespace Re.Base
             stream.Write(headerBytes, 0, RecordHeaderLength);
 
             stream.Write(bytes, 0, bytes.Length);
-
-            block.FreeBytes -= bytes.Length;
-            
-
         }
 
         #region Helper Functions

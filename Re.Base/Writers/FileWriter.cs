@@ -34,13 +34,13 @@ namespace Re.Base.Writers
 				if (header.BlocksInFile > 0)
                 {
                     bool blockFound = false;
-                    long blockSequence = 0;
+                    long blockSequence = 1;
                     while(!blockFound)
                     {
-                        BlockHeader block = manager.ReadBlockHeader(stream, 0);
+                        BlockHeader block = manager.ReadBlockHeader(stream, blockSequence);
                         if (block.FreeBytes > modelBytes.Length)
                         {
-                            manager.WriteRecordToBlock(stream, block, modelBytes);
+                            manager.WriteRecordToBlock(stream, blockSequence, modelBytes);
                             blockFound = true;
                         }
                         blockSequence++;
@@ -51,9 +51,8 @@ namespace Re.Base.Writers
                 else
                 {
                     manager.WriteNewBlock(stream);
+                    manager.WriteRecordToBlock(stream, 1, modelBytes);
                 }
-
-                
 
 
                 stream.Close();

@@ -24,7 +24,7 @@ namespace Re.Base.Readers
             fileName = $"{fileLocation}/data_{sourceName}.rbs";
 
             this.query = query;
-            dataManager = new DataManager();
+            dataManager = new DataManager(fileName);
         }
 
         IEnumerator<TModel> IEnumerable<TModel>.GetEnumerator()
@@ -58,11 +58,10 @@ namespace Re.Base.Readers
 
         internal TModel FindById(Guid recordId)
         {
-            FileStream stream = File.Open(fileName, FileMode.Open);
-            BlockHeader block = dataManager.ReadBlockHeader(stream, 0);
+            BlockHeader block = dataManager.ReadBlockHeader(0);
 
-            RecordHeader[] records = dataManager.ReadRecordsInBlock(stream, 0, 1);
-            byte[] recordBytes = dataManager.ReadFullRecord(stream, 0, records, 0);
+            RecordHeader[] records = dataManager.ReadRecordsInBlock(0, 1);
+            byte[] recordBytes = dataManager.ReadFullRecord(0, records, 0);
 
             string serializedRecord = Encoding.UTF8.GetString(recordBytes);
             TModel record = Newtonsoft.Json.JsonConvert.DeserializeObject<TModel>(serializedRecord);

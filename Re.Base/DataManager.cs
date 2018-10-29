@@ -8,53 +8,129 @@ namespace Re.Base
 {
     public class DataManager
     {
-        private const byte FileBeginToken = 0x00A;
-        private const byte BlockBeginToken = 0x00B;
-        private const byte RecordBeginToken = 0x00C;
+        private const byte FileBeginToken = 0x000A;
+        private const byte BlockBeginToken = 0x000B;
+        private const byte RecordBeginToken = 0x000C;
 
+        private const byte DateTimeTypeToken = 0x001A;
+        private const byte Int64TypeToken = 0x001B;
+        private const byte Int32TypeToken = 0x001C;
+        private const byte Int16TypeToken = 0x001D;
+        private const byte DecimalTypeToken = 0x001E;
+        private const byte BigStringTypeToken = 0x001F;
+        private const byte LittleStringTypeToken = 0x002A;
+        
         private const int FileHeaderLength = 1024;
         private const int BlockHeaderLength = 128;
         private const int RecordHeaderLength = 128;
         private const int BlockLength = 8000;
 
-        private FileHeader fileHeader;
+        private const int LittleStringLength = 100;
+        private const int BigStringLength = 1000;
+
+        private FileStream _stream;
+        private FileHeader _fileHeader;
+        
+
+        public DataManager(string fileLocation)
+        {
+            if (File.Exists(fileLocation))
+            {
+                _stream = File.Open(fileLocation, FileMode.Open);
+                _fileHeader = this.ReadFileHeader();
+            }
+            else
+            {
+                _stream = File.Create(fileLocation);
+                _fileHeader = new FileHeader()
+                {
+                    BlocksInFile = 0,
+                    DataStructure = new DataStructure()
+                    {
+                        Fields = new List<FieldDefinition>()
+                    }
+                };
+            }
+
+        }
 
         /// <summary>
         /// The file header is 1024 bytes.
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="header"></param>
-        public void WriteFileHeader(FileStream stream, FileHeader header)
+        public void WriteFileHeader()
         {
             //Set position to the beginning of the stream.
-            stream.Position = 0;
+            _stream.Position = 0;
             
             byte[] bytes = new byte[FileHeaderLength];
             //This is a token byte to assure the processor this is a correct file.
             bytes[0] = FileBeginToken;
-            BitConverter.GetBytes((long)header.BlocksInFile).CopyTo(bytes, 1);
-            //I havent decided what else needs to be in the header yet...so we will fill it up with blank space.
-            FillArray(bytes, FileHeaderLength, 9);
-            stream.Write(bytes, 0, FileHeaderLength);
+            BitConverter.GetBytes((long)_fileHeader.BlocksInFile).CopyTo(bytes, 1);
 
-            fileHeader = header;
+            int bytePointer = 9;
+            foreach(FieldDefinition field in _fileHeader.DataStructure.Fields)
+            {
+                byte[] fieldNameBytes = Encoding.ASCII.GetBytes(field.FieldName);
+                fieldNameBytes.CopyTo(bytes, bytePointer);
+                bytePointer += fieldNameBytes.Length;
+
+                byte dataTypeByte;
+                switch (field.DataType)
+                {
+                    case DataType.Int32:
+                        dataTypeByte = Int32TypeToken;
+                        break;
+                    case DataType.Int64:
+                        dataTypeByte = Int64TypeToken;
+                        break;
+                    case DataType.Int16:
+                        dataTypeByte = Int16TypeToken;
+                        break;
+                    case DataType.DateTime:
+                        dataTypeByte = DateTimeTypeToken;
+                        break;
+                    case DataType.Decimal:
+                        dataTypeByte = DecimalTypeToken;
+                        break;
+                    case DataType.LittleString:
+                        dataTypeByte = LittleStringTypeToken;
+                        break;
+                    case DataType.BigString:
+                        dataTypeByte = BigStringTypeToken;
+                        break;
+                    default:
+                        throw new NotSupportedException("");
+                }
+
+                bytes[bytePointer] = dataTypeByte;
+                bytePointer++;
+
+                //TODO: nullable
+
+            }
+
+            //I havent decided what else needs to be in the header yet...so we will fill it up with blank space.
+            FillArray(bytes, FileHeaderLength, bytePointer);
+            _stream.Write(bytes, 0, FileHeaderLength);
         }
 
-        public FileHeader ReadFileHeader(FileStream stream)
+        public FileHeader ReadFileHeader()
         {
-            if (this.fileHeader != null)
+            if (_fileHeader != null)
             {
-                return this.fileHeader;
+                return _fileHeader;
             }
 
             FileHeader header = new FileHeader();
-            stream.Position = 0;
+            _stream.Position = 0;
             byte[] headerBytes = new byte[FileHeaderLength];
 
-            stream.Read(headerBytes, 0, FileHeaderLength);
+            _stream.Read(headerBytes, 0, FileHeaderLength);
 
             //The file header is corrupt
-            if (headerBytes[0] != 0x000A)
+            if (headerBytes[0] != FileBeginToken)
             {
                 throw new InvalidOperationException();
             }
@@ -62,53 +138,66 @@ namespace Re.Base
             long blockCount = BitConverter.ToInt64(headerBytes, 1);
             header.BlocksInFile = blockCount;
 
-            this.fileHeader = header;
+
+
+            _fileHeader = header;
             return header;
         }
-
-        public byte[] ReadBlock(FileStream stream, long blockSequence)
+        public void AddField(DataType type, string name, bool nullable)
         {
-            JumpToBlock(stream, blockSequence);
+            if (_fileHeader.BlocksInFile > 0)
+            {
+                throw new NotSupportedException("Altering the data structure after records have been inserted is not supported");
+            }
+
+            _fileHeader.DataStructure.Fields.Add(new FieldDefinition() { DataType = type, FieldName = name, Nullable = nullable });
+
+            WriteFileHeader();
+        }
+
+        public byte[] ReadBlock(long blockSequence)
+        {
+            JumpToBlock(blockSequence);
 
             byte[] bytes = new byte[BlockLength];
 
-            stream.Read(bytes, 0, BlockLength);
+            _stream.Read(bytes, 0, BlockLength);
 
             return bytes;
         }
 
-        public void WriteBlockHeader(FileStream stream, BlockHeader header)
+        public void WriteBlockHeader(BlockHeader header)
         {
-            JumpToBlockHeader(stream, header.BlockSequence);
+            JumpToBlockHeader(header.BlockSequence);
 
             byte[] bytes = new byte[BlockHeaderLength];
             bytes[0] = BlockBeginToken;
             BitConverter.GetBytes(header.BlockSequence).CopyTo(bytes, 1);
             BitConverter.GetBytes(header.FreeBytes).CopyTo(bytes, 9);
-            stream.Write(bytes, 0, BlockHeaderLength);
+            _stream.Write(bytes, 0, BlockHeaderLength);
         }
 
-        public void WriteNewBlock(FileStream stream)
+        public void WriteNewBlock()
         {
-            this.fileHeader.BlocksInFile = this.fileHeader.BlocksInFile + 1;
-            WriteFileHeader(stream, this.fileHeader);
+            _fileHeader.BlocksInFile = _fileHeader.BlocksInFile + 1;
+            WriteFileHeader();
 
             //Jump to the end of the stream;
-            BlockHeader header = new BlockHeader() { BlockFragmented = false, BlockSequence = fileHeader.BlocksInFile, FreeBytes = BlockLength };
-            WriteBlockHeader(stream, header);
+            BlockHeader header = new BlockHeader() { BlockFragmented = false, BlockSequence = _fileHeader.BlocksInFile, FreeBytes = BlockLength };
+            WriteBlockHeader(header);
             
-            stream.Write(new byte[BlockLength], 0, BlockLength);
+            _stream.Write(new byte[BlockLength], 0, BlockLength);
         }
 
-        public BlockHeader ReadBlockHeader(FileStream stream, long blockSequence)
+        public BlockHeader ReadBlockHeader(long blockSequence)
         {
-            JumpToBlockHeader(stream, blockSequence);
+            JumpToBlockHeader(blockSequence);
 
             byte[] bytes = new byte[BlockHeaderLength];
 
-            stream.Read(bytes, 0, BlockHeaderLength);
+            _stream.Read(bytes, 0, BlockHeaderLength);
 
-            if (bytes[0] != 0x000B)
+            if (bytes[0] != BlockBeginToken)
             {
                 throw new InvalidOperationException();
             }
@@ -121,15 +210,15 @@ namespace Re.Base
             return header;
         }
 
-        public RecordHeader[] ReadRecordsInBlock(FileStream stream, long blockSequence, int recordCount)
+        public RecordHeader[] ReadRecordsInBlock(long blockSequence, int recordCount)
         {
-            JumpToBlock(stream, blockSequence);
+            JumpToBlock(blockSequence);
             RecordHeader[] headers = new RecordHeader[recordCount];
 
             for (int h = 0; h < recordCount; h++)
             {
                 byte[] recordHeaderBytes = new byte[RecordHeaderLength];
-                stream.Read(recordHeaderBytes, 0, RecordHeaderLength);
+                _stream.Read(recordHeaderBytes, 0, RecordHeaderLength);
 
                 if (recordHeaderBytes[0] != RecordBeginToken)
                 {
@@ -146,34 +235,34 @@ namespace Re.Base
                 }
 
                 header.Id = new Guid(idBytes);
-
+                 
                 headers[h] = header;
             }
 
             return headers;
         }
 
-        public byte[] ReadFullRecord(FileStream stream, long blockSequence, RecordHeader[] allHeadersInblock, int headToRead)
+        public byte[] ReadFullRecord(long blockSequence, RecordHeader[] allHeadersInblock, int headToRead)
         {
             var recordToRead = allHeadersInblock[headToRead];
-            JumpToRecord(stream, blockSequence, allHeadersInblock, headToRead);
+            JumpToRecord(blockSequence, allHeadersInblock, headToRead);
 
             byte[] record = new byte[recordToRead.BytesInRecord];
 
-            stream.Read(record, 0, recordToRead.BytesInRecord);
+            _stream.Read(record, 0, recordToRead.BytesInRecord);
             return record;
         }
 
-        public void WriteRecordToBlock(FileStream stream, long blockSequence, byte[] bytes)
+        public void WriteRecordToBlock(long blockSequence, byte[] bytes)
         {
 
-            BlockHeader header = ReadBlockHeader(stream, blockSequence);
+            BlockHeader header = ReadBlockHeader(blockSequence);
             header.FreeBytes -= (bytes.Length + RecordHeaderLength);
 
-            WriteBlockHeader(stream, header);
+            WriteBlockHeader(header);
                         
             long firstAvailableByte = BlockLength - header.FreeBytes;
-            stream.Position += firstAvailableByte;
+            _stream.Position += firstAvailableByte;
 
             byte[] headerBytes = new byte[RecordHeaderLength];
             headerBytes[0] = RecordBeginToken;
@@ -181,24 +270,24 @@ namespace Re.Base
 
             Guid recordId = Guid.NewGuid();
             recordId.ToByteArray().CopyTo(headerBytes, 9);
-            stream.Write(headerBytes, 0, RecordHeaderLength);
+            _stream.Write(headerBytes, 0, RecordHeaderLength);
 
-            stream.Write(bytes, 0, bytes.Length);
+            _stream.Write(bytes, 0, bytes.Length);
         }
 
         #region Helper Functions
 
-        private void JumpToBlock(FileStream stream, long blockSequence)
+        private void JumpToBlock(long blockSequence)
         {
-            stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength + BlockHeaderLength;
+            _stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength + BlockHeaderLength;
         }
 
-        private void JumpToBlockHeader(FileStream stream, long blockSequence)
+        private void JumpToBlockHeader(long blockSequence)
         {
-            stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength;
+            _stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength;
         }
 
-        private void JumpToRecord(FileStream stream, long blockSequence, RecordHeader[] headersInBlock, int headerSequence)
+        private void JumpToRecord(long blockSequence, RecordHeader[] headersInBlock, int headerSequence)
         {
             long position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength + BlockHeaderLength;
             for (int i = 0; i < headerSequence; i++)
@@ -210,7 +299,7 @@ namespace Re.Base
 
             position += RecordHeaderLength;
 
-            stream.Position = position;
+            _stream.Position = position;
         }
 
         private void FillArray(byte[] bytes, long count, long startingIndex = 0)
@@ -223,5 +312,24 @@ namespace Re.Base
 
         #endregion
 
+    }
+
+    public class SchemaManager
+    {
+        private FileStream _stream;
+        
+        public SchemaManager(string fileLocation)
+        {
+            if (File.Exists(fileLocation))
+            {
+                _stream = File.Open(fileLocation, FileMode.Open);
+            }
+            else
+            {
+                _stream = File.Create(fileLocation);
+            }
+
+
+        }
     }
 }

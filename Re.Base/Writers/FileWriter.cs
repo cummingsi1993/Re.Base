@@ -18,72 +18,42 @@ namespace Re.Base.Writers
 			string sourceName = typeof(TModel).Name;
             fileName = $"{databaseLocation}/data_{sourceName}.rbs";
 
-            manager = new DataManager();
+            manager = new DataManager(fileName);
         }
 
         public void WriteNewModel(TModel model)
         {
-            using (FileStream stream = File.Exists(fileName) ?
-                OpenFile() :
-                this.StartNewFile())
-            {
-                //DbRecord<TModel> record = new DbRecord<TModel>(model);
-                string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
-                byte[] modelBytes = Encoding.UTF8.GetBytes(serializedModel);
+            
+            //DbRecord<TModel> record = new DbRecord<TModel>(model);
+            string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
+            byte[] modelBytes = Encoding.UTF8.GetBytes(serializedModel);
 
-				if (header.BlocksInFile > 0)
+		    if (header.BlocksInFile > 0)
+            {
+                bool blockFound = false;
+                long blockSequence = 1;
+                while(!blockFound)
                 {
-                    bool blockFound = false;
-                    long blockSequence = 1;
-                    while(!blockFound)
+                    BlockHeader block = manager.ReadBlockHeader(blockSequence);
+                    if (block.FreeBytes > modelBytes.Length)
                     {
-                        BlockHeader block = manager.ReadBlockHeader(stream, blockSequence);
-                        if (block.FreeBytes > modelBytes.Length)
-                        {
-                            manager.WriteRecordToBlock(stream, blockSequence, modelBytes);
-                            blockFound = true;
-                        }
-                        blockSequence++;
+                        manager.WriteRecordToBlock(blockSequence, modelBytes);
+                        blockFound = true;
                     }
+                    blockSequence++;
+                }
 
                     
-                }
-                else
-                {
-                    manager.WriteNewBlock(stream);
-                    manager.WriteRecordToBlock(stream, 1, modelBytes);
-                }
-
-
-                stream.Close();
             }
-        }
-
-		private FileStream OpenFile()
-		{
-			FileStream fileStream = File.Open(fileName, FileMode.Open);
-            header = manager.ReadFileHeader(fileStream);
-
-			return fileStream;
-		}
-
-        private FileStream StartNewFile()
-        {
-            FileStream fileStream = System.IO.File.Create(fileName);
-			header = new FileHeader() { BlocksInFile = 0 };
-
-            manager.WriteFileHeader(fileStream, header);
+            else
+            {
+                manager.WriteNewBlock();
+                manager.WriteRecordToBlock(1, modelBytes);
+            }
             
-			
-            return fileStream;
         }
 
-        private void WriteHeader(FileStream stream)
-        {
-			stream.WriteByte(0x000A);
-            byte[] bytes = BitConverter.GetBytes((long)header.BlocksInFile);
-            stream.Write(bytes, 0, 8);
-        }
+		
 
 		
 

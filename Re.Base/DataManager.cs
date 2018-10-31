@@ -1,4 +1,5 @@
-﻿using Re.Base.Models;
+﻿using Re.Base.Extensions;
+using Re.Base.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +20,7 @@ namespace Re.Base
         private const byte DecimalTypeToken = 0x001E;
         private const byte BigStringTypeToken = 0x001F;
         private const byte LittleStringTypeToken = 0x002A;
-        
+
         private const int FileHeaderLength = 1024;
         private const int BlockHeaderLength = 128;
         private const int RecordHeaderLength = 128;
@@ -29,26 +30,38 @@ namespace Re.Base
         private const int BigStringLength = 1000;
 
         private FileStream _stream;
+        private FileStream _schemaStream;
         private FileHeader _fileHeader;
-        
+        private DataStructure _schema;
 
-        public DataManager(string fileLocation)
+        public DataManager(string fileLocation, string recordName)
         {
-            if (File.Exists(fileLocation))
+            string fileName = $"{fileLocation}/data_{recordName}.rbs";
+            string schemaFileName = $"{fileLocation}/schema_{recordName}.rbs";
+            if (File.Exists(fileName))
             {
-                _stream = File.Open(fileLocation, FileMode.Open);
+                _stream = File.Open(fileName, FileMode.Open);
                 _fileHeader = this.ReadFileHeader();
             }
             else
             {
-                _stream = File.Create(fileLocation);
+                _stream = File.Create(fileName);
                 _fileHeader = new FileHeader()
                 {
-                    BlocksInFile = 0,
-                    DataStructure = new DataStructure()
-                    {
-                        Fields = new List<FieldDefinition>()
-                    }
+                    BlocksInFile = 0
+                };
+            }
+
+            if (File.Exists(schemaFileName))
+            {
+                _schemaStream = File.Open(schemaFileName, FileMode.Open);
+            }
+            else
+            {
+                _schemaStream = File.Create(schemaFileName);
+                _schema = new DataStructure()
+                {
+                    Fields = new List<FieldDefinition>()
                 };
             }
 
@@ -63,54 +76,14 @@ namespace Re.Base
         {
             //Set position to the beginning of the stream.
             _stream.Position = 0;
-            
+
             byte[] bytes = new byte[FileHeaderLength];
             //This is a token byte to assure the processor this is a correct file.
             bytes[0] = FileBeginToken;
             BitConverter.GetBytes((long)_fileHeader.BlocksInFile).CopyTo(bytes, 1);
 
             int bytePointer = 9;
-            foreach(FieldDefinition field in _fileHeader.DataStructure.Fields)
-            {
-                byte[] fieldNameBytes = Encoding.ASCII.GetBytes(field.FieldName);
-                fieldNameBytes.CopyTo(bytes, bytePointer);
-                bytePointer += fieldNameBytes.Length;
-
-                byte dataTypeByte;
-                switch (field.DataType)
-                {
-                    case DataType.Int32:
-                        dataTypeByte = Int32TypeToken;
-                        break;
-                    case DataType.Int64:
-                        dataTypeByte = Int64TypeToken;
-                        break;
-                    case DataType.Int16:
-                        dataTypeByte = Int16TypeToken;
-                        break;
-                    case DataType.DateTime:
-                        dataTypeByte = DateTimeTypeToken;
-                        break;
-                    case DataType.Decimal:
-                        dataTypeByte = DecimalTypeToken;
-                        break;
-                    case DataType.LittleString:
-                        dataTypeByte = LittleStringTypeToken;
-                        break;
-                    case DataType.BigString:
-                        dataTypeByte = BigStringTypeToken;
-                        break;
-                    default:
-                        throw new NotSupportedException("");
-                }
-
-                bytes[bytePointer] = dataTypeByte;
-                bytePointer++;
-
-                //TODO: nullable
-
-            }
-
+            
             //I havent decided what else needs to be in the header yet...so we will fill it up with blank space.
             FillArray(bytes, FileHeaderLength, bytePointer);
             _stream.Write(bytes, 0, FileHeaderLength);
@@ -123,36 +96,120 @@ namespace Re.Base
                 return _fileHeader;
             }
 
-            FileHeader header = new FileHeader();
             _stream.Position = 0;
-            byte[] headerBytes = new byte[FileHeaderLength];
+            
+            _fileHeader = _stream.ReadFileHeader();
+            return _fileHeader;
+        }
 
-            _stream.Read(headerBytes, 0, FileHeaderLength);
-
-            //The file header is corrupt
-            if (headerBytes[0] != FileBeginToken)
+        #region Schema 
+        public void ReadSchema()
+        {
+            _schemaStream.Position = 0;
+            if (_schemaStream.ReadByte() != FileBeginToken)
             {
                 throw new InvalidOperationException();
             }
 
-            long blockCount = BitConverter.ToInt64(headerBytes, 1);
-            header.BlocksInFile = blockCount;
-
-
-
-            _fileHeader = header;
-            return header;
-        }
-        public void AddField(DataType type, string name, bool nullable)
-        {
-            if (_fileHeader.BlocksInFile > 0)
+            _schema = new DataStructure()
             {
-                throw new NotSupportedException("Altering the data structure after records have been inserted is not supported");
+                Fields = new List<FieldDefinition>()
+            };
+
+            bool EOF = false;
+
+            while (!EOF)
+            {
+                _schema.Fields.Add(_schemaStream.ReadFieldDefinition());
+                if (_schemaStream.Length <= _schemaStream.Position) EOF = true;
+            }
+        }
+
+        public void WriteSchema()
+        {
+            _schemaStream.Position = 0;
+            _schemaStream.WriteByte(FileBeginToken);
+
+            foreach(FieldDefinition field in _schema.Fields)
+            {
+                _schemaStream.WriteFieldDefinition(field);
             }
 
-            _fileHeader.DataStructure.Fields.Add(new FieldDefinition() { DataType = type, FieldName = name, Nullable = nullable });
+            //Truncate the stream
+            if (_schemaStream.Position < _schemaStream.Length)
+            {
+                _schemaStream.SetLength(_schemaStream.Position + 1);
+            }
 
-            WriteFileHeader();
+            _schemaStream.Flush();
+        }
+
+        public void AddField(FieldDefinition field)
+        {
+            _schema.Fields.Add(field);
+            WriteSchema();
+        }
+
+        public void RemoveField(string fieldName)
+        {
+            _schema.Fields.RemoveAll(field => field.FieldName == fieldName);
+            WriteSchema();
+        }
+
+        public void ModifyField(string fieldName, FieldDefinition newFieldDefinition)
+        {
+            foreach(FieldDefinition field in _schema.Fields)
+            {
+                if (field.FieldName == fieldName)
+                {
+                    field.DataType = newFieldDefinition.DataType;
+                    field.FieldName = newFieldDefinition.FieldName;
+                    field.Nullable = newFieldDefinition.Nullable;
+                }
+            }
+        }
+
+        #endregion
+
+
+        public void InsertRecord(params object[] fields)
+        {
+            //Find available spot to place record....
+            if (_fileHeader.BlocksInFile == 0)
+            {
+
+            }
+
+            List<RecordField> recordFields = new List<RecordField>();
+
+            for (int i = 0; i < fields.Length; i++)
+            {
+                var field = fields[i];
+                var fieldDefinition = _schema.Fields[i];
+
+                if (fieldDefinition.DataType == DataType.Int32)
+                {
+                    Int32? value = field as Int32?;
+                    if (!value.HasValue)
+                    {
+                        throw new Exception();
+                    }
+                    recordFields.Add(new RecordField() { DataType = fieldDefinition.DataType, Value = value.Value });
+                }
+                else if (fieldDefinition.DataType == DataType.Int16)
+                {
+                    Int16? value = field as Int16?;
+                    if (!value.HasValue)
+                    {
+                        throw new Exception();
+                    }
+                    recordFields.Add(new RecordField() { DataType = fieldDefinition.DataType, Value = value.Value });
+                }
+
+
+                
+            }
+            
         }
 
         public byte[] ReadBlock(long blockSequence)
@@ -185,7 +242,7 @@ namespace Re.Base
             //Jump to the end of the stream;
             BlockHeader header = new BlockHeader() { BlockFragmented = false, BlockSequence = _fileHeader.BlocksInFile, FreeBytes = BlockLength };
             WriteBlockHeader(header);
-            
+
             _stream.Write(new byte[BlockLength], 0, BlockLength);
         }
 
@@ -193,21 +250,7 @@ namespace Re.Base
         {
             JumpToBlockHeader(blockSequence);
 
-            byte[] bytes = new byte[BlockHeaderLength];
-
-            _stream.Read(bytes, 0, BlockHeaderLength);
-
-            if (bytes[0] != BlockBeginToken)
-            {
-                throw new InvalidOperationException();
-            }
-
-            BlockHeader header = new BlockHeader();
-
-            header.BlockSequence = BitConverter.ToInt64(bytes, 1);
-            header.FreeBytes = BitConverter.ToInt64(bytes, 9);
-
-            return header;
+            return _stream.ReadBlockHeader();
         }
 
         public RecordHeader[] ReadRecordsInBlock(long blockSequence, int recordCount)
@@ -235,7 +278,7 @@ namespace Re.Base
                 }
 
                 header.Id = new Guid(idBytes);
-                 
+
                 headers[h] = header;
             }
 
@@ -260,7 +303,7 @@ namespace Re.Base
             header.FreeBytes -= (bytes.Length + RecordHeaderLength);
 
             WriteBlockHeader(header);
-                        
+
             long firstAvailableByte = BlockLength - header.FreeBytes;
             _stream.Position += firstAvailableByte;
 
@@ -313,23 +356,5 @@ namespace Re.Base
         #endregion
 
     }
-
-    public class SchemaManager
-    {
-        private FileStream _stream;
-        
-        public SchemaManager(string fileLocation)
-        {
-            if (File.Exists(fileLocation))
-            {
-                _stream = File.Open(fileLocation, FileMode.Open);
-            }
-            else
-            {
-                _stream = File.Create(fileLocation);
-            }
-
-
-        }
-    }
+   
 }

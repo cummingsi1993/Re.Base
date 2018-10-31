@@ -24,7 +24,7 @@ namespace Re.Base.Readers
             fileName = $"{fileLocation}/data_{sourceName}.rbs";
 
             this.query = query;
-            dataManager = new DataManager(fileName);
+            dataManager = new DataManager(fileLocation, sourceName);
         }
 
         IEnumerator<TModel> IEnumerable<TModel>.GetEnumerator()

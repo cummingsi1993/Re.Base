@@ -9,48 +9,53 @@ namespace Re.Base.Writers
     public class FileWriter<TModel>
         where TModel : class
     {
-        string fileName;
 		long blockSize = 8000;
 		FileHeader header;
         DataManager manager;
         public FileWriter(string databaseLocation)
         {
 			string sourceName = typeof(TModel).Name;
-            fileName = $"{databaseLocation}/data_{sourceName}.rbs";
+            
 
-            manager = new DataManager(fileName);
+            manager = new DataManager(databaseLocation, sourceName);
         }
 
         public void WriteNewModel(TModel model)
         {
-            
+            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Id", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "FirstName", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "LastName", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Age", Nullable = false });
+
+            manager.ReadSchema();
+
             //DbRecord<TModel> record = new DbRecord<TModel>(model);
-            string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
-            byte[] modelBytes = Encoding.UTF8.GetBytes(serializedModel);
+            //      string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
+            //      byte[] modelBytes = Encoding.UTF8.GetBytes(serializedModel);
 
-		    if (header.BlocksInFile > 0)
-            {
-                bool blockFound = false;
-                long blockSequence = 1;
-                while(!blockFound)
-                {
-                    BlockHeader block = manager.ReadBlockHeader(blockSequence);
-                    if (block.FreeBytes > modelBytes.Length)
-                    {
-                        manager.WriteRecordToBlock(blockSequence, modelBytes);
-                        blockFound = true;
-                    }
-                    blockSequence++;
-                }
+            //if (header.BlocksInFile > 0)
+            //      {
+            //          bool blockFound = false;
+            //          long blockSequence = 1;
+            //          while(!blockFound)
+            //          {
+            //              BlockHeader block = manager.ReadBlockHeader(blockSequence);
+            //              if (block.FreeBytes > modelBytes.Length)
+            //              {
+            //                  manager.WriteRecordToBlock(blockSequence, modelBytes);
+            //                  blockFound = true;
+            //              }
+            //              blockSequence++;
+            //          }
 
-                    
-            }
-            else
-            {
-                manager.WriteNewBlock();
-                manager.WriteRecordToBlock(1, modelBytes);
-            }
-            
+
+            //      }
+            //      else
+            //      {
+            //          manager.WriteNewBlock();
+            //          manager.WriteRecordToBlock(1, modelBytes);
+            //      }
+
         }
 
 		

@@ -8,9 +8,6 @@ namespace Re.Base.Models
     {
 
         public long BlocksInFile { get; set; }
-
-        public DataStructure DataStructure { get; set; }
-
     }
 
     public class DataStructure

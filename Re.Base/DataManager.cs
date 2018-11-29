@@ -1,4 +1,6 @@
 ﻿using Re.Base.Extensions;
+using Re.Base.Interfaces;
+using Re.Base.Logic;
 using Re.Base.Models;
 using System;
 using System.Collections.Generic;
@@ -13,13 +15,7 @@ namespace Re.Base
         private const byte BlockBeginToken = 0x000B;
         private const byte RecordBeginToken = 0x000C;
 
-        private const byte DateTimeTypeToken = 0x001A;
-        private const byte Int64TypeToken = 0x001B;
-        private const byte Int32TypeToken = 0x001C;
-        private const byte Int16TypeToken = 0x001D;
-        private const byte DecimalTypeToken = 0x001E;
-        private const byte BigStringTypeToken = 0x001F;
-        private const byte LittleStringTypeToken = 0x002A;
+
 
         private const int FileHeaderLength = 1024;
         private const int BlockHeaderLength = 128;
@@ -33,9 +29,12 @@ namespace Re.Base
         private FileStream _schemaStream;
         private FileHeader _fileHeader;
         private DataStructure _schema;
+        private Creation.FieldTypeFactory _fieldTypeFactory;
 
         public DataManager(string fileLocation, string recordName)
         {
+            _fieldTypeFactory = new Creation.FieldTypeFactory();
+
             string fileName = $"{fileLocation}/data_{recordName}.rbs";
             string schemaFileName = $"{fileLocation}/schema_{recordName}.rbs";
             if (File.Exists(fileName))
@@ -50,11 +49,14 @@ namespace Re.Base
                 {
                     BlocksInFile = 0
                 };
+
+
             }
 
             if (File.Exists(schemaFileName))
             {
                 _schemaStream = File.Open(schemaFileName, FileMode.Open);
+                this.ReadSchema();
             }
             else
             {
@@ -178,72 +180,33 @@ namespace Re.Base
             if (_fileHeader.BlocksInFile == 0)
             {
 
+                var block = RecordBlock.CreateNew(_stream, _schema, 0);
+
+                _fileHeader.BlocksInFile++;
+                WriteFileHeader();
+
+                block.InsertRecord(fields);
+
             }
-
-            List<RecordField> recordFields = new List<RecordField>();
-
-            for (int i = 0; i < fields.Length; i++)
+            else
             {
-                var field = fields[i];
-                var fieldDefinition = _schema.Fields[i];
-
-                if (fieldDefinition.DataType == DataType.Int32)
+                var lastBlock = RecordBlock.LoadFromStream(_stream, _schema, _fileHeader.BlocksInFile - 1);
+                if (lastBlock.BlockHeader.FreeBytes > _schema.GetRecordSize())
                 {
-                    Int32? value = field as Int32?;
-                    if (!value.HasValue)
-                    {
-                        throw new Exception();
-                    }
-                    recordFields.Add(new RecordField() { DataType = fieldDefinition.DataType, Value = value.Value });
+                    lastBlock.InsertRecord(fields);
                 }
-                else if (fieldDefinition.DataType == DataType.Int16)
+                else
                 {
-                    Int16? value = field as Int16?;
-                    if (!value.HasValue)
-                    {
-                        throw new Exception();
-                    }
-                    recordFields.Add(new RecordField() { DataType = fieldDefinition.DataType, Value = value.Value });
+                    var newBlock = RecordBlock.CreateNew(_stream, _schema, _fileHeader.BlocksInFile);
+                    newBlock.InsertRecord(fields);
+
+                    _fileHeader.BlocksInFile++;
+                    WriteFileHeader();
                 }
-
-
-                
             }
             
-        }
 
-        public byte[] ReadBlock(long blockSequence)
-        {
-            JumpToBlock(blockSequence);
-
-            byte[] bytes = new byte[BlockLength];
-
-            _stream.Read(bytes, 0, BlockLength);
-
-            return bytes;
-        }
-
-        public void WriteBlockHeader(BlockHeader header)
-        {
-            JumpToBlockHeader(header.BlockSequence);
-
-            byte[] bytes = new byte[BlockHeaderLength];
-            bytes[0] = BlockBeginToken;
-            BitConverter.GetBytes(header.BlockSequence).CopyTo(bytes, 1);
-            BitConverter.GetBytes(header.FreeBytes).CopyTo(bytes, 9);
-            _stream.Write(bytes, 0, BlockHeaderLength);
-        }
-
-        public void WriteNewBlock()
-        {
-            _fileHeader.BlocksInFile = _fileHeader.BlocksInFile + 1;
-            WriteFileHeader();
-
-            //Jump to the end of the stream;
-            BlockHeader header = new BlockHeader() { BlockFragmented = false, BlockSequence = _fileHeader.BlocksInFile, FreeBytes = BlockLength };
-            WriteBlockHeader(header);
-
-            _stream.Write(new byte[BlockLength], 0, BlockLength);
+            
         }
 
         public BlockHeader ReadBlockHeader(long blockSequence)
@@ -253,36 +216,16 @@ namespace Re.Base
             return _stream.ReadBlockHeader();
         }
 
-        public RecordHeader[] ReadRecordsInBlock(long blockSequence, int recordCount)
+        public Record[] ReadAllRecords()
         {
-            JumpToBlock(blockSequence);
-            RecordHeader[] headers = new RecordHeader[recordCount];
-
-            for (int h = 0; h < recordCount; h++)
+            List<Record> records = new List<Record>();
+            for (int i = 0; i < this._fileHeader.BlocksInFile; i++)
             {
-                byte[] recordHeaderBytes = new byte[RecordHeaderLength];
-                _stream.Read(recordHeaderBytes, 0, RecordHeaderLength);
-
-                if (recordHeaderBytes[0] != RecordBeginToken)
-                {
-                    throw new InvalidOperationException();
-                }
-
-                RecordHeader header = new RecordHeader();
-                header.BytesInRecord = BitConverter.ToInt32(recordHeaderBytes, 1);
-                byte[] idBytes = new byte[16];
-
-                for (int i = 0; i < 15; i++)
-                {
-                    idBytes[i] = recordHeaderBytes[i + 5];
-                }
-
-                header.Id = new Guid(idBytes);
-
-                headers[h] = header;
+                var block = RecordBlock.LoadFromStream(_stream, _schema, i);
+                records.AddRange(block.ReadAllRecords());
             }
 
-            return headers;
+            return records.ToArray();
         }
 
         public byte[] ReadFullRecord(long blockSequence, RecordHeader[] allHeadersInblock, int headToRead)
@@ -294,28 +237,6 @@ namespace Re.Base
 
             _stream.Read(record, 0, recordToRead.BytesInRecord);
             return record;
-        }
-
-        public void WriteRecordToBlock(long blockSequence, byte[] bytes)
-        {
-
-            BlockHeader header = ReadBlockHeader(blockSequence);
-            header.FreeBytes -= (bytes.Length + RecordHeaderLength);
-
-            WriteBlockHeader(header);
-
-            long firstAvailableByte = BlockLength - header.FreeBytes;
-            _stream.Position += firstAvailableByte;
-
-            byte[] headerBytes = new byte[RecordHeaderLength];
-            headerBytes[0] = RecordBeginToken;
-            BitConverter.GetBytes((long)bytes.Length).CopyTo(headerBytes, 1);
-
-            Guid recordId = Guid.NewGuid();
-            recordId.ToByteArray().CopyTo(headerBytes, 9);
-            _stream.Write(headerBytes, 0, RecordHeaderLength);
-
-            _stream.Write(bytes, 0, bytes.Length);
         }
 
         #region Helper Functions

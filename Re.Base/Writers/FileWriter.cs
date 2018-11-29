@@ -23,11 +23,15 @@ namespace Re.Base.Writers
         public void WriteNewModel(TModel model)
         {
             manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Id", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "FirstName", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "LastName", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Age", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.Boolean, FieldName = "Test", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "DateOfBirth", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Sex", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Barcode", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "LabLocation", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeCreated", Nullable = false });
+            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeUpdated", Nullable = false });
 
-            manager.ReadSchema();
+            //manager.InsertRecord(model.)
 
             //DbRecord<TModel> record = new DbRecord<TModel>(model);
             //      string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);

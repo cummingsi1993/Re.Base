@@ -58,14 +58,15 @@ namespace Re.Base.Readers
 
         internal TModel FindById(Guid recordId)
         {
-            BlockHeader block = dataManager.ReadBlockHeader(0);
+            //BlockHeader block = dataManager.ReadBlockHeader(0);
 
-            RecordHeader[] records = dataManager.ReadRecordsInBlock(0, 1);
-            byte[] recordBytes = dataManager.ReadFullRecord(0, records, 0);
+            //RecordHeader[] records = dataManager.ReadRecordsInBlock(0, 1);
+            //byte[] recordBytes = dataManager.ReadFullRecord(0, records, 0);
 
-            string serializedRecord = Encoding.UTF8.GetString(recordBytes);
-            TModel record = Newtonsoft.Json.JsonConvert.DeserializeObject<TModel>(serializedRecord);
-            return record;
+            //string serializedRecord = Encoding.UTF8.GetString(recordBytes);
+            //TModel record = Newtonsoft.Json.JsonConvert.DeserializeObject<TModel>(serializedRecord);
+            //return record;
+            throw new NotImplementedException();
 
         }
 

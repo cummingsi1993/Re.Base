@@ -1,4 +1,5 @@
-﻿using Re.Base.Models;
+﻿using Re.Base.Constants;
+using Re.Base.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,20 +9,7 @@ namespace Re.Base.Extensions
 {
     public static class FileStreamExtensions
     {
-        #region Tokens
-        private const byte FileBeginToken = 0x000A;
-        private const byte BlockBeginToken = 0x000B;
-        private const byte RecordBeginToken = 0x000C;
 
-        private const byte DateTimeTypeToken = 0x001A;
-        private const byte Int64TypeToken = 0x001B;
-        private const byte Int32TypeToken = 0x001C;
-        private const byte Int16TypeToken = 0x001D;
-        private const byte DecimalTypeToken = 0x001E;
-        private const byte BigStringTypeToken = 0x001F;
-        private const byte LittleStringTypeToken = 0x002A;
-
-        #endregion
 
         #region Constant Configuration
         private const int BlockHeaderLength = 128;
@@ -78,13 +66,14 @@ namespace Re.Base.Extensions
         {
             byte dataTypeToken = (byte)fileStream.ReadByte();
 
-            if (dataTypeToken == DateTimeTypeToken) return DataType.DateTime;
-            else if (dataTypeToken == Int64TypeToken) return DataType.Int64;
-            else if (dataTypeToken == Int32TypeToken) return DataType.Int32;
-            else if (dataTypeToken == Int16TypeToken) return DataType.Int16;
-            else if (dataTypeToken == DecimalTypeToken) return DataType.Decimal;
-            else if (dataTypeToken == BigStringTypeToken) return DataType.BigString;
-            else if (dataTypeToken == LittleStringTypeToken) return DataType.LittleString;
+            if (dataTypeToken == Tokens.DateTimeTypeToken) return DataType.DateTime;
+            else if (dataTypeToken == Tokens.Int64TypeToken) return DataType.Int64;
+            else if (dataTypeToken == Tokens.Int32TypeToken) return DataType.Int32;
+            else if (dataTypeToken == Tokens.Int16TypeToken) return DataType.Int16;
+            else if (dataTypeToken == Tokens.BooleanTypeToken) return DataType.Boolean;
+            else if (dataTypeToken == Tokens.DecimalTypeToken) return DataType.Decimal;
+            else if (dataTypeToken == Tokens.BigStringTypeToken) return DataType.BigString;
+            else if (dataTypeToken == Tokens.LittleStringTypeToken) return DataType.LittleString;
             else
             {
                 throw new InvalidOperationException();
@@ -107,19 +96,18 @@ namespace Re.Base.Extensions
 
         public static BlockHeader ReadBlockHeader(this FileStream fileStream)
         {
-            byte[] bytes = new byte[BlockHeaderLength];
+            byte beginToken = (byte)fileStream.ReadByte();
 
-            fileStream.Read(bytes, 0, BlockHeaderLength);
-
-            if (bytes[0] != BlockBeginToken)
+            if (beginToken != Tokens.BlockBeginToken)
             {
                 throw new InvalidOperationException();
             }
 
             BlockHeader header = new BlockHeader();
 
-            header.BlockSequence = BitConverter.ToInt64(bytes, 1);
-            header.FreeBytes = BitConverter.ToInt64(bytes, 9);
+            header.BlockSequence = fileStream.ReadInt64();
+            header.FreeBytes = fileStream.ReadInt64();
+            header.RecordCount = fileStream.ReadInt64();
 
             return header;
         }
@@ -133,7 +121,7 @@ namespace Re.Base.Extensions
             fileStream.Read(headerBytes, 0, FileHeaderLength);
 
             //The file header is corrupt
-            if (headerBytes[0] != FileBeginToken)
+            if (headerBytes[0] != Tokens.FileBeginToken)
             {
                 throw new InvalidOperationException();
             }
@@ -141,13 +129,9 @@ namespace Re.Base.Extensions
             long blockCount = BitConverter.ToInt64(headerBytes, 1);
             header.BlocksInFile = blockCount;
 
-
-
-            _fileHeader = header;
             return header;
         }
         #endregion
-
 
         #region Write Functions
 
@@ -213,13 +197,16 @@ namespace Re.Base.Extensions
 
         public static void WriteDataType(this FileStream fileStream, DataType value)
         {
-            if (value == DataType.DateTime) fileStream.WriteByte(DateTimeTypeToken);
-            else if (value == DataType.Int64) fileStream.WriteByte(Int64TypeToken);
-            else if (value == DataType.Int32) fileStream.WriteByte(Int32TypeToken);
-            else if (value == DataType.Int16) fileStream.WriteByte(Int16TypeToken);
-            else if (value == DataType.Decimal) fileStream.WriteByte(DecimalTypeToken);
-            else if (value == DataType.BigString) fileStream.WriteByte(BigStringTypeToken);
-            else if (value == DataType.LittleString) fileStream.WriteByte(LittleStringTypeToken);
+            if (value == DataType.DateTime) fileStream.WriteByte(Tokens.DateTimeTypeToken);
+            else if (value == DataType.Int64) fileStream.WriteByte(Tokens.Int64TypeToken);
+            else if (value == DataType.Int32) fileStream.WriteByte(Tokens.Int32TypeToken);
+            else if (value == DataType.Int16) fileStream.WriteByte(Tokens.Int16TypeToken);
+            else if (value == DataType.Boolean) fileStream.WriteByte(Tokens.BooleanTypeToken);
+            else if (value == DataType.Decimal) fileStream.WriteByte(Tokens.DecimalTypeToken);
+            else if (value == DataType.BigString) fileStream.WriteByte(Tokens.BigStringTypeToken);
+            else if (value == DataType.LittleString) fileStream.WriteByte(Tokens.LittleStringTypeToken);
+            else
+                throw new InvalidOperationException();
 
         }
 
@@ -233,6 +220,14 @@ namespace Re.Base.Extensions
             fileStream.WriteBoolean(fieldDefinition.Nullable);
         }
 
+        public static void WriteBlockHeader(this FileStream fileStream, BlockHeader blockHeader)
+        {
+            fileStream.WriteByte(Tokens.BlockBeginToken);
+            fileStream.WriteInt64(blockHeader.BlockSequence);
+            fileStream.WriteInt64(blockHeader.FreeBytes);
+            fileStream.WriteInt64(blockHeader.RecordCount);
+        }
+
         #endregion
 
         #region Helper Functions
@@ -244,6 +239,27 @@ namespace Re.Base.Extensions
             {
                 bytes[i] = 0;
             }
+        }
+
+        #endregion
+
+        #region Seek Functions 
+
+        public static void SeekToBlockHeader(this FileStream fileStream, long blockIndex)
+        {
+            fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength;
+        }
+
+        public static void SeekToBlockContents(this FileStream fileStream, long blockIndex)
+        {
+            fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
+        }
+
+        public static void SeekToRecord(this FileStream fileStream, DataStructure schema, long blockIndex, long recordIndex)
+        {
+            var blockContents = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
+
+            fileStream.Position = blockContents + (recordIndex * schema.GetRecordSize());
         }
 
         #endregion

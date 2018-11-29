@@ -7,7 +7,7 @@ namespace Re.Base.Models
     public class Record
     {
 
-        public List<RecordField> Fields { get; set; }
+        public RecordField[] Fields { get; set; }
 
     }
 }

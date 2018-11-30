@@ -1,5 +1,5 @@
-﻿using Re.Base.Logic;
-using Re.Base.Models;
+﻿//using Re.Base.Logic;
+//using Re.Base.Models;
 using Re.Base.Queryables.File;
 using Re.Base.Readers;
 using Re.Base.Writers;
@@ -15,17 +15,17 @@ namespace Re.Base.Storage
         where TModel : class
     {
         private string databaseLocation;
-        private Index<TModel> index;
+        //private Index<TModel> index;
 
         public DbSet(FileQueryProvider provider, Expression expression) : base(provider, expression)
         {
-            this.index = new Index<TModel>();
+            //this.index = new Index<TModel>();
         }
 
         public DbSet(string databaseLocation) : base(databaseLocation)
         {
             this.databaseLocation = databaseLocation;
-            this.index = new Index<TModel>();
+            //this.index = new Index<TModel>();
         }
 
         public TModel Find(Guid recordKey)

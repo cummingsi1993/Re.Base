@@ -1,4 +1,4 @@
-﻿using Re.Base.Models;
+﻿//using Re.Base.Models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace Re.Base.Readers
         private string fileName;
         Queryables.RebaseQuery query;
 
-        DataManager dataManager;
+        //DataManager dataManager;
 
         public FileReader(string fileLocation, Queryables.RebaseQuery query)
         {
@@ -24,7 +24,7 @@ namespace Re.Base.Readers
             fileName = $"{fileLocation}/data_{sourceName}.rbs";
 
             this.query = query;
-            dataManager = new DataManager(fileLocation, sourceName);
+            //dataManager = new DataManager(fileLocation, sourceName);
         }
 
         IEnumerator<TModel> IEnumerable<TModel>.GetEnumerator()
@@ -77,8 +77,8 @@ namespace Re.Base.Readers
             Newtonsoft.Json.JsonTextReader reader;
             Queryables.RebaseQuery query;
 
-            BlockHeader currentBlock;
-            FileHeader file;
+            //BlockHeader currentBlock;
+            //FileHeader file;
 
             public Enumerator(System.IO.StreamReader stream, Queryables.RebaseQuery query)
             {
@@ -126,7 +126,7 @@ namespace Re.Base.Readers
                 //}
 
                 long blockCount = BitConverter.ToInt64(blockCountBytes, 0);
-                file = new FileHeader() { BlocksInFile = blockCount };
+                //file = new FileHeader() { BlocksInFile = blockCount };
             }
 
             public Guid? MoveToNextId()

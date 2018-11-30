@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Re.Base.Constants
+namespace Re.Base.Data.Constants
 {
     public class Tokens
     {

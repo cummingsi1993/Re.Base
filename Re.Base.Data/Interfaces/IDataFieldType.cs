@@ -1,10 +1,10 @@
-﻿using Re.Base.Models;
+﻿using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Re.Base.Interfaces
+namespace Re.Base.Data.Interfaces
 {
     public interface IDataFieldType
     {

@@ -1,13 +1,13 @@
-﻿using Re.Base.Extensions;
-using Re.Base.Interfaces;
-using Re.Base.Models;
+﻿using Re.Base.Data.Extensions;
+using Re.Base.Data.Interfaces;
+using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
 
-namespace Re.Base.DataFieldTypes
+namespace Re.Base.Data.DataFieldTypes
 {
     public class Int64FieldType : IDataFieldType
     {

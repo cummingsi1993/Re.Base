@@ -1,37 +1,23 @@
-﻿using Re.Base.Extensions;
-using Re.Base.Interfaces;
-using Re.Base.Logic;
-using Re.Base.Models;
+﻿using Re.Base.Data.Extensions;
+using Re.Base.Data.Interfaces;
+using Re.Base.Data.Logic;
+using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Re.Base
+namespace Re.Base.Data
 {
-    public class DataManager
+    public class DataStore : IDataStore
     {
-        private const byte FileBeginToken = 0x000A;
-        private const byte BlockBeginToken = 0x000B;
-        private const byte RecordBeginToken = 0x000C;
-
-
-
-        private const int FileHeaderLength = 1024;
-        private const int BlockHeaderLength = 128;
-        private const int RecordHeaderLength = 128;
-        private const int BlockLength = 8000;
-
-        private const int LittleStringLength = 100;
-        private const int BigStringLength = 1000;
-
         private FileStream _stream;
         private FileStream _schemaStream;
         private FileHeader _fileHeader;
         private DataStructure _schema;
         private Creation.FieldTypeFactory _fieldTypeFactory;
 
-        public DataManager(string fileLocation, string recordName)
+        public DataStore(string fileLocation, string recordName)
         {
             _fieldTypeFactory = new Creation.FieldTypeFactory();
 
@@ -69,29 +55,24 @@ namespace Re.Base
 
         }
 
-        /// <summary>
-        /// The file header is 1024 bytes.
-        /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="header"></param>
-        public void WriteFileHeader()
+        private void WriteFileHeader()
         {
             //Set position to the beginning of the stream.
             _stream.Position = 0;
 
-            byte[] bytes = new byte[FileHeaderLength];
+            byte[] bytes = new byte[Constants.Lengths.FileHeaderLength];
             //This is a token byte to assure the processor this is a correct file.
-            bytes[0] = FileBeginToken;
+            bytes[0] = Constants.Tokens.FileBeginToken;
             BitConverter.GetBytes((long)_fileHeader.BlocksInFile).CopyTo(bytes, 1);
 
             int bytePointer = 9;
             
             //I havent decided what else needs to be in the header yet...so we will fill it up with blank space.
-            FillArray(bytes, FileHeaderLength, bytePointer);
-            _stream.Write(bytes, 0, FileHeaderLength);
+            FillArray(bytes, Constants.Lengths.FileHeaderLength, bytePointer);
+            _stream.Write(bytes, 0, Constants.Lengths.FileHeaderLength);
         }
 
-        public FileHeader ReadFileHeader()
+        private FileHeader ReadFileHeader()
         {
             if (_fileHeader != null)
             {
@@ -105,10 +86,10 @@ namespace Re.Base
         }
 
         #region Schema 
-        public void ReadSchema()
+        private void ReadSchema()
         {
             _schemaStream.Position = 0;
-            if (_schemaStream.ReadByte() != FileBeginToken)
+            if (_schemaStream.ReadByte() != Constants.Tokens.FileBeginToken)
             {
                 throw new InvalidOperationException();
             }
@@ -130,7 +111,7 @@ namespace Re.Base
         public void WriteSchema()
         {
             _schemaStream.Position = 0;
-            _schemaStream.WriteByte(FileBeginToken);
+            _schemaStream.WriteByte(Constants.Tokens.FileBeginToken);
 
             foreach(FieldDefinition field in _schema.Fields)
             {
@@ -171,8 +152,12 @@ namespace Re.Base
             }
         }
 
-        #endregion
+        public DataStructure GetSchema()
+        {
+            return _schema;
+        }
 
+        #endregion
 
         public void InsertRecord(params object[] fields)
         {
@@ -209,13 +194,6 @@ namespace Re.Base
             
         }
 
-        public BlockHeader ReadBlockHeader(long blockSequence)
-        {
-            JumpToBlockHeader(blockSequence);
-
-            return _stream.ReadBlockHeader();
-        }
-
         public Record[] ReadAllRecords()
         {
             List<Record> records = new List<Record>();
@@ -228,43 +206,42 @@ namespace Re.Base
             return records.ToArray();
         }
 
-        public byte[] ReadFullRecord(long blockSequence, RecordHeader[] allHeadersInblock, int headToRead)
+        public Record ReadRecord(long index)
         {
-            var recordToRead = allHeadersInblock[headToRead];
-            JumpToRecord(blockSequence, allHeadersInblock, headToRead);
+            long totalIndex = 0;
 
-            byte[] record = new byte[recordToRead.BytesInRecord];
+            for (int i = 0; i < this._fileHeader.BlocksInFile; i++)
+            {
+                var block = RecordBlock.LoadFromStream(_stream, _schema, i);
+                //the index is less than the upper bound of this block
+                if (index < totalIndex + block.BlockHeader.RecordCount)
+                {
+                    return block.ReadRecord(index - totalIndex);
+                }
 
-            _stream.Read(record, 0, recordToRead.BytesInRecord);
-            return record;
+                totalIndex += block.BlockHeader.RecordCount;
+            }
+
+            throw new Exception();
+        }
+
+        public Record[] Query(Func<Record, bool> query)
+        {
+            List<Record> records = new List<Record>();
+            for (int i = 0; i < this._fileHeader.BlocksInFile; i++)
+            {
+                var block = RecordBlock.LoadFromStream(_stream, _schema, i);
+                records.AddRange(block.Query(query));
+            }
+
+            return records.ToArray();
         }
 
         #region Helper Functions
 
-        private void JumpToBlock(long blockSequence)
-        {
-            _stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength + BlockHeaderLength;
-        }
 
-        private void JumpToBlockHeader(long blockSequence)
-        {
-            _stream.Position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength;
-        }
 
-        private void JumpToRecord(long blockSequence, RecordHeader[] headersInBlock, int headerSequence)
-        {
-            long position = ((BlockLength + BlockHeaderLength) * blockSequence) + FileHeaderLength + BlockHeaderLength;
-            for (int i = 0; i < headerSequence; i++)
-            {
-                var header = headersInBlock[i];
-                position += RecordHeaderLength;
-                position += header.BytesInRecord;
-            }
 
-            position += RecordHeaderLength;
-
-            _stream.Position = position;
-        }
 
         private void FillArray(byte[] bytes, long count, long startingIndex = 0)
         {

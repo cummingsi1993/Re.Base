@@ -4,8 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using Re.Base.Models;
-using Re.Base.Logic;
+using Re.Base.Data.Models;
+using Re.Base.Data.Logic;
+using System.Diagnostics;
 
 namespace Re.Base.Client
 {
@@ -27,11 +28,29 @@ namespace Re.Base.Client
             var instructions = StorageBuilder.CreateFileBasedStorage("D:\\Temp\\ReBase")
                 .GetDbSet<Instruction>();
 
-            DataManager manager = new DataManager(@"D:\Temp\ReBase", "Instruction");
+            Data.DataStore manager = new Data.DataStore(@"D:\Temp\ReBase", "Instruction");
 
-            var records = manager.ReadAllRecords();
+            //var query = manager.Query(r => (int)r.Fields.First().Value > 5000 && (int)r.Fields.First().Value < 6000);
+            var timer = Stopwatch.StartNew();
 
-            await SaveInstructions(instructions);
+            timer.Start();
+            var record = manager.ReadRecord(1);
+            timer.Stop();
+
+            Console.Write(timer.ElapsedMilliseconds);
+
+            //var record2 = manager.ReadRecord(5);
+            //var record3 = manager.ReadRecord(6);
+            //var record4 = manager.ReadRecord(7);
+            //var record5 = manager.ReadRecord(8);
+            //var record6 = manager.ReadRecord(2900000);
+            //var record7 = manager.ReadRecord(10);
+            //var record8 = manager.ReadRecord(11);
+            //var record9 = manager.ReadRecord(12);
+
+            //var records = manager.ReadAllRecords();
+
+            //await SaveInstructions(instructions);
 
 			//var people = (from Person person in persons
 			//			  where person.Tags.Contains("ipsum")
@@ -54,7 +73,7 @@ namespace Re.Base.Client
             //string sample_data = System.IO.File.ReadAllText("D:\\Temp\\ReBase\\sample_instructions.json");
             //var instruction_data = Newtonsoft.Json.JsonConvert.DeserializeObject<Instruction[]>(sample_data);
 
-            DataManager manager = new DataManager(@"D:\Temp\ReBase", "Instruction");
+            Data.DataStore manager = new Data.DataStore(@"D:\Temp\ReBase", "Instruction");
             //manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Id", Nullable = false });
             //manager.AddField(new FieldDefinition() { DataType = DataType.Boolean, FieldName = "Test", Nullable = false });
             //manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "DateOfBirth", Nullable = false });
@@ -65,11 +84,11 @@ namespace Re.Base.Client
             //manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeUpdated", Nullable = false });
 
 
-            
+            DateTime dateOfBirth = new DateTime(1995, 4, 23);
 
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 1000; i++)
             {
-                manager.InsertRecord(i + 1, true);
+                manager.InsertRecord(i + 1, true, dateOfBirth, "F", "XXXXXXXXXX", "LCA", DateTime.Now, DateTime.Now);
             }
             
 

@@ -1,11 +1,11 @@
-﻿using Re.Base.Constants;
-using Re.Base.Models;
+﻿using Re.Base.Data.Constants;
+using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Re.Base.Extensions
+namespace Re.Base.Data.Extensions
 {
     public static class FileStreamExtensions
     {
@@ -44,6 +44,14 @@ namespace Re.Base.Extensions
             fileStream.Read(bytes, 0, 8);
 
             return BitConverter.ToInt64(bytes, 0);
+        }
+
+        public static DateTime ReadDateTime(this FileStream fileStream)
+        {
+            byte[] bytes = new byte[8];
+            fileStream.Read(bytes, 0, 8);
+            var ticks = BitConverter.ToInt64(bytes, 0);
+            return DateTime.FromBinary(ticks);
         }
 
         public static String ReadAsciiString(this FileStream fileStream, int bytesToRead)
@@ -159,6 +167,12 @@ namespace Re.Base.Extensions
             fileStream.Write(bytes, 0, bytes.Length);
         }
 
+        public static void WriteDateTime(this FileStream fileStream, DateTime value)
+        {
+            byte[] bytes = BitConverter.GetBytes(value.Ticks);
+            fileStream.Write(bytes, 0, bytes.Length);
+        }
+
         public static void WriteAsciiString(this FileStream fileStream, string value, int? size = null)
         {
             byte[] bytes;
@@ -253,6 +267,11 @@ namespace Re.Base.Extensions
         public static void SeekToBlockContents(this FileStream fileStream, long blockIndex)
         {
             fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
+        }
+
+        public static void SeekToRecordInBlock(this FileStream fileStream, long blockIndex, int recordSize, int recordIndex)
+        {
+            fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength + (recordSize * recordIndex);
         }
 
         public static void SeekToRecord(this FileStream fileStream, DataStructure schema, long blockIndex, long recordIndex)

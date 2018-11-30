@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Re.Base.Logic
+namespace Re.Base.Data.Logic
 {
     public class Index<TModel>
     {

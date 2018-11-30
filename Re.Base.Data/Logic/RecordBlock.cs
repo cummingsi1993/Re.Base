@@ -1,14 +1,13 @@
-﻿using Re.Base.Extensions;
-using Re.Base.Models;
+﻿using Re.Base.Data.Extensions;
+using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Re.Base.Extensions;
-using Re.Base.Constants;
-using Re.Base.Interfaces;
+using Re.Base.Data.Constants;
+using Re.Base.Data.Interfaces;
 
-namespace Re.Base.Logic
+namespace Re.Base.Data.Logic
 {
     public class RecordBlock
     {
@@ -48,6 +47,13 @@ namespace Re.Base.Logic
 
         public BlockHeader BlockHeader { get; private set; }
 
+        public Record ReadRecord(long index)
+        {
+            _stream.SeekToRecord(_schema, this.Index, index);
+            
+            return this.ReadNextRecord();
+        }
+
         public Record[] ReadAllRecords()
         {
 
@@ -74,6 +80,21 @@ namespace Re.Base.Logic
             }
 
             return records;
+        }
+
+        public Record[] Query(Func<Record, bool> func)
+        {
+            List<Record> records = new List<Record>();
+            _stream.SeekToBlockContents(this.Index);
+            for (int i = 0; i < this.BlockHeader.RecordCount; i++)
+            {
+                Record record = ReadNextRecord();
+                if (func(record))
+                {
+                    records.Add(record);
+                }
+            }
+            return records.ToArray();
         }
 
         public long Index { get; private set; }
@@ -123,6 +144,24 @@ namespace Re.Base.Logic
 
         public void UpdateRecord()
         {
+
+        }
+
+        private Record ReadNextRecord()
+        {
+            Record record = new Record() { Fields = new RecordField[_schema.Fields.Count] };
+
+            for (int f = 0; f < _schema.Fields.Count; f++)
+            {
+                var fieldDefinition = _schema.Fields[f];
+
+                var fieldType = _fieldTypeFactory.GetFieldType(fieldDefinition.DataType);
+                object fieldValue = fieldType.ReadFromStream(_stream);
+
+                record.Fields[f] = new RecordField() { Value = fieldValue, DataType = fieldDefinition.DataType };
+            }
+
+            return record;
 
         }
 

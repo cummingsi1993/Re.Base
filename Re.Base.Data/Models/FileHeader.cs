@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Re.Base.Models
+namespace Re.Base.Data.Models
 {
     public class FileHeader
     {

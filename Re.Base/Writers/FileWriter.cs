@@ -1,8 +1,8 @@
-﻿using Re.Base.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+
 
 namespace Re.Base.Writers
 {
@@ -10,26 +10,26 @@ namespace Re.Base.Writers
         where TModel : class
     {
 		long blockSize = 8000;
-		FileHeader header;
-        DataManager manager;
+		//FileHeader header;
+  //      DataManager manager;
         public FileWriter(string databaseLocation)
         {
 			string sourceName = typeof(TModel).Name;
             
 
-            manager = new DataManager(databaseLocation, sourceName);
+            //manager = new DataManager(databaseLocation, sourceName);
         }
 
         public void WriteNewModel(TModel model)
         {
-            manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Id", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.Boolean, FieldName = "Test", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "DateOfBirth", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Sex", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Barcode", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "LabLocation", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeCreated", Nullable = false });
-            manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeUpdated", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.Int32, FieldName = "Id", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.Boolean, FieldName = "Test", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "DateOfBirth", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Sex", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "Barcode", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.LittleString, FieldName = "LabLocation", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeCreated", Nullable = false });
+            //manager.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeUpdated", Nullable = false });
 
             //manager.InsertRecord(model.)
 

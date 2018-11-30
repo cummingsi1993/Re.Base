@@ -8,4 +8,11 @@
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Creation\" />
+    <Folder Include="Interfaces\" />
+    <Folder Include="Logic\" />
+    <Folder Include="Models\" />
+  </ItemGroup>
+
 </Project>

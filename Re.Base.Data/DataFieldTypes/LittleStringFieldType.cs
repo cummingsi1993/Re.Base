@@ -21,12 +21,12 @@ namespace Re.Base.Data.DataFieldTypes
             return (value as string) != null;
         }
 
-        public object ReadFromStream(FileStream stream)
+        public object ReadFromStream(Stream stream)
         {
             return stream.ReadUTF8String(Constants.Lengths.LittleStringLength);
         }
 
-        public void WriteToStream(FileStream stream, object value)
+        public void WriteToStream(Stream stream, object value)
         {
             stream.WriteUTF8String((string)value, Constants.Lengths.LittleStringLength);
         }

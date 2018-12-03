@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Re.Base.Data.Extensions
 {
-    public static class FileStreamExtensions
+    public static class StreamExtensions
     {
 
 
@@ -17,62 +17,62 @@ namespace Re.Base.Data.Extensions
         #endregion
 
         #region Read Functions
-        public static Boolean ReadBoolean(this FileStream fileStream)
+        public static Boolean ReadBoolean(this Stream stream)
         {
-            return fileStream.ReadByte() == 1;
+            return stream.ReadByte() == 1;
         }
 
-        public static Int16 ReadInt16(this FileStream fileStream)
+        public static Int16 ReadInt16(this Stream stream)
         {
             byte[] bytes = new byte[4];
-            fileStream.Read(bytes, 0, 4);
+            stream.Read(bytes, 0, 4);
 
             return BitConverter.ToInt16(bytes, 0);
         }
 
-        public static Int32 ReadInt32(this FileStream fileStream)
+        public static Int32 ReadInt32(this Stream stream)
         {
             byte[] bytes = new byte[4];
-            fileStream.Read(bytes, 0, 4);
+            stream.Read(bytes, 0, 4);
 
             return BitConverter.ToInt32(bytes, 0);
         }
 
-        public static Int64 ReadInt64(this FileStream fileStream)
+        public static Int64 ReadInt64(this Stream stream)
         {
             byte[] bytes = new byte[8];
-            fileStream.Read(bytes, 0, 8);
+            stream.Read(bytes, 0, 8);
 
             return BitConverter.ToInt64(bytes, 0);
         }
 
-        public static DateTime ReadDateTime(this FileStream fileStream)
+        public static DateTime ReadDateTime(this Stream stream)
         {
             byte[] bytes = new byte[8];
-            fileStream.Read(bytes, 0, 8);
+            stream.Read(bytes, 0, 8);
             var ticks = BitConverter.ToInt64(bytes, 0);
             return DateTime.FromBinary(ticks);
         }
 
-        public static String ReadAsciiString(this FileStream fileStream, int bytesToRead)
+        public static String ReadAsciiString(this Stream stream, int bytesToRead)
         {
             byte[] bytes = new byte[bytesToRead];
-            fileStream.Read(bytes, 0, bytesToRead);
+            stream.Read(bytes, 0, bytesToRead);
 
             return Encoding.ASCII.GetString(bytes);
         }
 
-        public static String ReadUTF8String(this FileStream fileStream, int bytesToRead)
+        public static String ReadUTF8String(this Stream stream, int bytesToRead)
         {
             byte[] bytes = new byte[bytesToRead];
-            fileStream.Read(bytes, 0, bytesToRead);
+            stream.Read(bytes, 0, bytesToRead);
 
             return Encoding.UTF8.GetString(bytes);
         }
 
-        public static DataType ReadDataType(this FileStream fileStream)
+        public static DataType ReadDataType(this Stream stream)
         {
-            byte dataTypeToken = (byte)fileStream.ReadByte();
+            byte dataTypeToken = (byte)stream.ReadByte();
 
             if (dataTypeToken == Tokens.DateTimeTypeToken) return DataType.DateTime;
             else if (dataTypeToken == Tokens.Int64TypeToken) return DataType.Int64;
@@ -88,23 +88,23 @@ namespace Re.Base.Data.Extensions
             }
         }
 
-        public static FieldDefinition ReadFieldDefinition(this FileStream fileStream)
+        public static FieldDefinition ReadFieldDefinition(this Stream stream)
         {
             FieldDefinition field = new FieldDefinition();
 
-            int fieldNameLength = fileStream.ReadInt32();
-            string fieldName = fileStream.ReadUTF8String(fieldNameLength);
+            int fieldNameLength = stream.ReadInt32();
+            string fieldName = stream.ReadUTF8String(fieldNameLength);
             field.FieldName = fieldName;
-            field.DataType = fileStream.ReadDataType();
-            field.Nullable = fileStream.ReadBoolean();
+            field.DataType = stream.ReadDataType();
+            field.Nullable = stream.ReadBoolean();
 
             return field;
 
         }
 
-        public static BlockHeader ReadBlockHeader(this FileStream fileStream)
+        public static BlockHeader ReadBlockHeader(this Stream stream)
         {
-            byte beginToken = (byte)fileStream.ReadByte();
+            byte beginToken = (byte)stream.ReadByte();
 
             if (beginToken != Tokens.BlockBeginToken)
             {
@@ -113,20 +113,20 @@ namespace Re.Base.Data.Extensions
 
             BlockHeader header = new BlockHeader();
 
-            header.BlockSequence = fileStream.ReadInt64();
-            header.FreeBytes = fileStream.ReadInt64();
-            header.RecordCount = fileStream.ReadInt64();
+            header.BlockSequence = stream.ReadInt64();
+            header.FreeBytes = stream.ReadInt64();
+            header.RecordCount = stream.ReadInt64();
 
             return header;
         }
 
-        public static FileHeader ReadFileHeader(this FileStream fileStream)
+        public static FileHeader ReadFileHeader(this Stream stream)
         {
             FileHeader header = new FileHeader();
             
             byte[] headerBytes = new byte[FileHeaderLength];
 
-            fileStream.Read(headerBytes, 0, FileHeaderLength);
+            stream.Read(headerBytes, 0, FileHeaderLength);
 
             //The file header is corrupt
             if (headerBytes[0] != Tokens.FileBeginToken)
@@ -143,37 +143,37 @@ namespace Re.Base.Data.Extensions
 
         #region Write Functions
 
-        public static void WriteBoolean(this FileStream fileStream, Boolean value)
+        public static void WriteBoolean(this Stream stream, Boolean value)
         {
             byte byteValue =(byte)(value == true ? 1 : 0);
-            fileStream.WriteByte(byteValue);
+            stream.WriteByte(byteValue);
         }
 
-        public static void WriteInt16(this FileStream fileStream, Int16 value)
+        public static void WriteInt16(this Stream stream, Int16 value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
-            fileStream.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteInt32(this FileStream fileStream, Int32 value)
+        public static void WriteInt32(this Stream stream, Int32 value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
-            fileStream.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteInt64(this FileStream fileStream, Int64 value)
+        public static void WriteInt64(this Stream stream, Int64 value)
         {
             byte[] bytes = BitConverter.GetBytes(value);
-            fileStream.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteDateTime(this FileStream fileStream, DateTime value)
+        public static void WriteDateTime(this Stream stream, DateTime value)
         {
             byte[] bytes = BitConverter.GetBytes(value.Ticks);
-            fileStream.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteAsciiString(this FileStream fileStream, string value, int? size = null)
+        public static void WriteAsciiString(this Stream stream, string value, int? size = null)
         {
             byte[] bytes;
             byte[] encodedBytes = Encoding.ASCII.GetBytes(value);
@@ -187,11 +187,11 @@ namespace Re.Base.Data.Extensions
             {
                 bytes = encodedBytes;
             }
-            
-            fileStream.Write(bytes, 0, bytes.Length);
+
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteUTF8String(this FileStream fileStream, string value, int? size = null)
+        public static void WriteUTF8String(this Stream stream, string value, int? size = null)
         {
             byte[] bytes;
             byte[] encodedBytes = Encoding.UTF8.GetBytes(value);
@@ -206,40 +206,40 @@ namespace Re.Base.Data.Extensions
                 bytes = encodedBytes;
             }
 
-            fileStream.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteDataType(this FileStream fileStream, DataType value)
+        public static void WriteDataType(this Stream stream, DataType value)
         {
-            if (value == DataType.DateTime) fileStream.WriteByte(Tokens.DateTimeTypeToken);
-            else if (value == DataType.Int64) fileStream.WriteByte(Tokens.Int64TypeToken);
-            else if (value == DataType.Int32) fileStream.WriteByte(Tokens.Int32TypeToken);
-            else if (value == DataType.Int16) fileStream.WriteByte(Tokens.Int16TypeToken);
-            else if (value == DataType.Boolean) fileStream.WriteByte(Tokens.BooleanTypeToken);
-            else if (value == DataType.Decimal) fileStream.WriteByte(Tokens.DecimalTypeToken);
-            else if (value == DataType.BigString) fileStream.WriteByte(Tokens.BigStringTypeToken);
-            else if (value == DataType.LittleString) fileStream.WriteByte(Tokens.LittleStringTypeToken);
+            if (value == DataType.DateTime) stream.WriteByte(Tokens.DateTimeTypeToken);
+            else if (value == DataType.Int64) stream.WriteByte(Tokens.Int64TypeToken);
+            else if (value == DataType.Int32) stream.WriteByte(Tokens.Int32TypeToken);
+            else if (value == DataType.Int16) stream.WriteByte(Tokens.Int16TypeToken);
+            else if (value == DataType.Boolean) stream.WriteByte(Tokens.BooleanTypeToken);
+            else if (value == DataType.Decimal) stream.WriteByte(Tokens.DecimalTypeToken);
+            else if (value == DataType.BigString) stream.WriteByte(Tokens.BigStringTypeToken);
+            else if (value == DataType.LittleString) stream.WriteByte(Tokens.LittleStringTypeToken);
             else
                 throw new InvalidOperationException();
 
         }
 
-        public static void WriteFieldDefinition(this FileStream fileStream, FieldDefinition fieldDefinition)
+        public static void WriteFieldDefinition(this Stream stream, FieldDefinition fieldDefinition)
         {
             byte[] fieldNameBytes = Encoding.UTF8.GetBytes(fieldDefinition.FieldName);
             int fieldNameLength = fieldNameBytes.Length;
-            fileStream.WriteInt32(fieldNameLength);
-            fileStream.Write(fieldNameBytes, 0, fieldNameLength);
-            fileStream.WriteDataType(fieldDefinition.DataType);
-            fileStream.WriteBoolean(fieldDefinition.Nullable);
+            stream.WriteInt32(fieldNameLength);
+            stream.Write(fieldNameBytes, 0, fieldNameLength);
+            stream.WriteDataType(fieldDefinition.DataType);
+            stream.WriteBoolean(fieldDefinition.Nullable);
         }
 
-        public static void WriteBlockHeader(this FileStream fileStream, BlockHeader blockHeader)
+        public static void WriteBlockHeader(this Stream stream, BlockHeader blockHeader)
         {
-            fileStream.WriteByte(Tokens.BlockBeginToken);
-            fileStream.WriteInt64(blockHeader.BlockSequence);
-            fileStream.WriteInt64(blockHeader.FreeBytes);
-            fileStream.WriteInt64(blockHeader.RecordCount);
+            stream.WriteByte(Tokens.BlockBeginToken);
+            stream.WriteInt64(blockHeader.BlockSequence);
+            stream.WriteInt64(blockHeader.FreeBytes);
+            stream.WriteInt64(blockHeader.RecordCount);
         }
 
         #endregion
@@ -259,22 +259,22 @@ namespace Re.Base.Data.Extensions
 
         #region Seek Functions 
 
-        public static void SeekToBlockHeader(this FileStream fileStream, long blockIndex)
+        public static void SeekToBlockHeader(this Stream fileStream, long blockIndex)
         {
             fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength;
         }
 
-        public static void SeekToBlockContents(this FileStream fileStream, long blockIndex)
+        public static void SeekToBlockContents(this Stream fileStream, long blockIndex)
         {
             fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
         }
 
-        public static void SeekToRecordInBlock(this FileStream fileStream, long blockIndex, int recordSize, int recordIndex)
+        public static void SeekToRecordInBlock(this Stream fileStream, long blockIndex, int recordSize, int recordIndex)
         {
             fileStream.Position = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength + (recordSize * recordIndex);
         }
 
-        public static void SeekToRecord(this FileStream fileStream, DataStructure schema, long blockIndex, long recordIndex)
+        public static void SeekToRecord(this Stream fileStream, DataStructure schema, long blockIndex, long recordIndex)
         {
             var blockContents = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
 

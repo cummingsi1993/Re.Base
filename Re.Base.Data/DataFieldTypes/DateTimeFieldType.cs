@@ -20,12 +20,12 @@ namespace Re.Base.Data.DataFieldTypes
             return (value as DateTime?).HasValue;
         }
 
-        public object ReadFromStream(FileStream stream)
+        public object ReadFromStream(Stream stream)
         {
             return stream.ReadDateTime();
         }
 
-        public void WriteToStream(FileStream stream, object value)
+        public void WriteToStream(Stream stream, object value)
         {
             stream.WriteDateTime((DateTime)value);
         }

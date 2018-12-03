@@ -23,12 +23,12 @@ namespace Re.Base.Data.DataFieldTypes
             return casted.HasValue;
         }
 
-        public object ReadFromStream(FileStream stream)
+        public object ReadFromStream(Stream stream)
         {
             return stream.ReadInt64();
         }
 
-        public void WriteToStream(FileStream stream, object value)
+        public void WriteToStream(Stream stream, object value)
         {
             stream.WriteInt64((Int64)value);
         }

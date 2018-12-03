@@ -6,25 +6,20 @@ using System.IO;
 using System.Text;
 using Re.Base.Data.Constants;
 using Re.Base.Data.Interfaces;
+using Re.Base.Data.Creation;
 
 namespace Re.Base.Data.Logic
 {
-    public class RecordBlock
+    public class RecordBlock : Block<Record>
     {
         private FileStream _stream;
         private DataStructure _schema;
         private Creation.FieldTypeFactory _fieldTypeFactory;
 
         private RecordBlock(FileStream stream, DataStructure schema, long index)
+            : base(stream, schema, index)
         {
-            _stream = stream;
-            _schema = schema;
-
-            this.Index = index;
-
-            _stream.SeekToBlockHeader(index);
-            this.BlockHeader = _stream.ReadBlockHeader();
-            _fieldTypeFactory = new Creation.FieldTypeFactory();
+           
         }
 
         public static RecordBlock LoadFromStream(FileStream stream, DataStructure schema, long index)
@@ -45,134 +40,20 @@ namespace Re.Base.Data.Logic
             return block;
         }
 
-        public BlockHeader BlockHeader { get; private set; }
-
-        public Record ReadRecord(long index)
+        protected override Record GetValue(DataStructure schema, FieldTypeFactory fieldTypeFactory, byte[] bytes)
         {
-            _stream.SeekToRecord(_schema, this.Index, index);
+            Record record = new Record() { Fields = new RecordField[schema.Fields.Count] };
+            MemoryStream stream = new MemoryStream(bytes);
+            for (int i = 0; i < schema.Fields.Count; i++)
+            {
+                var field = schema.Fields[i];
             
-            return this.ReadNextRecord();
-        }
-
-        public Record[] ReadAllRecords()
-        {
-
-            _stream.SeekToBlockContents(this.BlockHeader.BlockSequence);
-            Record[] records = new Record[this.BlockHeader.RecordCount];
-
-            
-            for (int i = 0; i < this.BlockHeader.RecordCount; i++)
-            {
-
-                Record record = new Record() { Fields = new RecordField[_schema.Fields.Count] };
-
-                for (int f = 0; f < _schema.Fields.Count; f++)
-                {
-                    var fieldDefinition = _schema.Fields[f];
-
-                    var fieldType = _fieldTypeFactory.GetFieldType(fieldDefinition.DataType);
-                    object fieldValue = fieldType.ReadFromStream(_stream);
-
-                    record.Fields[f] = new RecordField() { Value = fieldValue, DataType = fieldDefinition.DataType };
-                }
-
-                records[i] = record;
+                IDataFieldType fieldType = fieldTypeFactory.GetFieldType(field.DataType);
+                object fieldValue = fieldType.ReadFromStream(stream);
+                record.Fields[i] = new RecordField() { DataType = field.DataType, Value = fieldValue };
+                
             }
-
-            return records;
-        }
-
-        public Record[] Query(Func<Record, bool> func)
-        {
-            List<Record> records = new List<Record>();
-            _stream.SeekToBlockContents(this.Index);
-            for (int i = 0; i < this.BlockHeader.RecordCount; i++)
-            {
-                Record record = ReadNextRecord();
-                if (func(record))
-                {
-                    records.Add(record);
-                }
-            }
-            return records.ToArray();
-        }
-
-        public long Index { get; private set; }
-
-        public void InsertRecord(params object[] fields)
-        {
-            _stream.SeekToRecord(_schema, BlockHeader.BlockSequence, BlockHeader.RecordCount);
-
-            IDataFieldType[] fieldTypes = new IDataFieldType[fields.Length];
-
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var fieldDefinition = _schema.Fields[i];
-
-                fieldTypes[i] = _fieldTypeFactory.GetFieldType(fieldDefinition.DataType);
-            }
-
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var field = fields[i];
-                if (!fieldTypes[i].IsValid(field))
-                {
-                    //Maybe i should collect all the failures and return them at once.
-                    throw new Exception();
-                }
-            }
-
-
-            //Only if there are no failures, we start writing to the file
-            for (int i = 0; i < fields.Length; i++)
-            {
-                var field = fields[i];
-                fieldTypes[i].WriteToStream(_stream, field);
-            }
-
-
-            BlockHeader.FreeBytes -= _schema.GetRecordSize();
-            BlockHeader.RecordCount++;
-            _stream.Flush();
-            this.WriteBlockHeader();
-        }
-
-        public void DeleteRecord()
-        {
-
-        }
-
-        public void UpdateRecord()
-        {
-
-        }
-
-        private Record ReadNextRecord()
-        {
-            Record record = new Record() { Fields = new RecordField[_schema.Fields.Count] };
-
-            for (int f = 0; f < _schema.Fields.Count; f++)
-            {
-                var fieldDefinition = _schema.Fields[f];
-
-                var fieldType = _fieldTypeFactory.GetFieldType(fieldDefinition.DataType);
-                object fieldValue = fieldType.ReadFromStream(_stream);
-
-                record.Fields[f] = new RecordField() { Value = fieldValue, DataType = fieldDefinition.DataType };
-            }
-
             return record;
-
         }
-
-        private void WriteBlockHeader()
-        {
-            _stream.SeekToBlockHeader(this.Index);
-            _stream.WriteBlockHeader(this.BlockHeader);
-            _stream.Flush();
-        }
-
-
-
     }
 }

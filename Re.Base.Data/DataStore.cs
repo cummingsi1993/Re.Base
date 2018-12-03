@@ -170,7 +170,7 @@ namespace Re.Base.Data
                 _fileHeader.BlocksInFile++;
                 WriteFileHeader();
 
-                block.InsertRecord(fields);
+                block.Insert(fields);
 
             }
             else
@@ -178,12 +178,12 @@ namespace Re.Base.Data
                 var lastBlock = RecordBlock.LoadFromStream(_stream, _schema, _fileHeader.BlocksInFile - 1);
                 if (lastBlock.BlockHeader.FreeBytes > _schema.GetRecordSize())
                 {
-                    lastBlock.InsertRecord(fields);
+                    lastBlock.Insert(fields);
                 }
                 else
                 {
                     var newBlock = RecordBlock.CreateNew(_stream, _schema, _fileHeader.BlocksInFile);
-                    newBlock.InsertRecord(fields);
+                    newBlock.Insert(fields);
 
                     _fileHeader.BlocksInFile++;
                     WriteFileHeader();
@@ -200,7 +200,7 @@ namespace Re.Base.Data
             for (int i = 0; i < this._fileHeader.BlocksInFile; i++)
             {
                 var block = RecordBlock.LoadFromStream(_stream, _schema, i);
-                records.AddRange(block.ReadAllRecords());
+                records.AddRange(block.ReadAll());
             }
 
             return records.ToArray();
@@ -216,7 +216,7 @@ namespace Re.Base.Data
                 //the index is less than the upper bound of this block
                 if (index < totalIndex + block.BlockHeader.RecordCount)
                 {
-                    return block.ReadRecord(index - totalIndex);
+                    return block.Read(index - totalIndex);
                 }
 
                 totalIndex += block.BlockHeader.RecordCount;

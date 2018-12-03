@@ -17,8 +17,8 @@ namespace Re.Base.Data.Interfaces
 
         bool IsValid(object value);
 
-        void WriteToStream(FileStream stream, object value);
+        void WriteToStream(Stream stream, object value);
 
-        object ReadFromStream(FileStream stream);
+        object ReadFromStream(Stream stream);
     }
 }

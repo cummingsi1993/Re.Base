@@ -139,11 +139,18 @@ namespace Re.Base.Data.Extensions
 
             return header;
         }
-        #endregion
 
-        #region Write Functions
+		public static IndexDefinition ReadIndex(this Stream stream)
+		{
+			IndexDefinition index = new IndexDefinition();
+			index.IndexName = stream.ReadUTF8String(100);
+		}
 
-        public static void WriteBoolean(this Stream stream, Boolean value)
+		#endregion
+
+		#region Write Functions
+
+		public static void WriteBoolean(this Stream stream, Boolean value)
         {
             byte byteValue =(byte)(value == true ? 1 : 0);
             stream.WriteByte(byteValue);

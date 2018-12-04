@@ -14,6 +14,7 @@ namespace Re.Base.Data.Models
     public class DataStructure
     {
         public List<FieldDefinition> Fields { get; set; }
+		public List<IndexDefinition> Indexes { get; set; }
 
         public int GetRecordSize()
         {
@@ -29,6 +30,12 @@ namespace Re.Base.Data.Models
         public bool Nullable { get; set; }
 
     }
+
+	public class IndexDefinition
+	{
+		public string IndexName { get; set; }
+		public int[] FieldIds { get; set; }
+	}
 
     public enum DataType
     {

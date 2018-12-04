@@ -13,6 +13,7 @@ namespace Re.Base.Data
     {
         private FileStream _stream;
         private FileStream _schemaStream;
+		private List<IndexManager> _indexes;
         private FileHeader _fileHeader;
         private DataStructure _schema;
         private Creation.FieldTypeFactory _fieldTypeFactory;
@@ -52,6 +53,21 @@ namespace Re.Base.Data
                     Fields = new List<FieldDefinition>()
                 };
             }
+
+			foreach(IndexDefinition indexDefinition in _schema.Indexes)
+			{
+				string fullIndexPath = $"{fileLocation}/index_{recordName}_{indexDefinition.IndexName}";
+				if (File.Exists(fullIndexPath))
+				{
+					IndexManager indexManager = new IndexManager(File.Open(fullIndexPath, FileMode.Open));
+					_indexes.Add(indexManager);
+				}
+				else
+				{
+					FileStream indexStream = File.Create(fullIndexPath);
+					_indexes.Add(new IndexManager(indexStream));
+				}
+			}
 
         }
 

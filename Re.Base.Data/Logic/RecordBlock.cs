@@ -12,14 +12,9 @@ namespace Re.Base.Data.Logic
 {
     public class RecordBlock : Block<Record>
     {
-        private FileStream _stream;
-        private DataStructure _schema;
-        private Creation.FieldTypeFactory _fieldTypeFactory;
-
         private RecordBlock(FileStream stream, DataStructure schema, long index)
             : base(stream, schema, index)
         {
-           
         }
 
         public static RecordBlock LoadFromStream(FileStream stream, DataStructure schema, long index)

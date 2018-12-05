@@ -144,6 +144,8 @@ namespace Re.Base.Data.Extensions
 		{
 			IndexDefinition index = new IndexDefinition();
 			index.IndexName = stream.ReadUTF8String(100);
+
+            return index;
 		}
 
 		#endregion

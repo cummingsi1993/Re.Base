@@ -34,6 +34,7 @@ namespace Re.Base.Data.Models
 	public class IndexDefinition
 	{
 		public string IndexName { get; set; }
+        public Indexing.Enums.IndexType IndexType { get; set; }
 		public int[] FieldIds { get; set; }
 	}
 

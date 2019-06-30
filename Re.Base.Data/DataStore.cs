@@ -13,7 +13,7 @@ namespace Re.Base.Data
     {
         private FileStream _stream;
         private FileStream _schemaStream;
-		private List<IndexManager> _indexes;
+        private Indexing.IIndex<byte[]>[] indexes;
         private FileHeader _fileHeader;
         private DataStructure _schema;
         private Creation.FieldTypeFactory _fieldTypeFactory;
@@ -50,7 +50,8 @@ namespace Re.Base.Data
                 _schemaStream = File.Create(schemaFileName);
                 _schema = new DataStructure()
                 {
-                    Fields = new List<FieldDefinition>()
+                    Fields = new List<FieldDefinition>(),
+                    Indexes = new List<IndexDefinition>()
                 };
             }
 
@@ -112,7 +113,8 @@ namespace Re.Base.Data
 
             _schema = new DataStructure()
             {
-                Fields = new List<FieldDefinition>()
+                Fields = new List<FieldDefinition>(),
+                Indexes = new List<IndexDefinition>()
             };
 
             bool EOF = false;

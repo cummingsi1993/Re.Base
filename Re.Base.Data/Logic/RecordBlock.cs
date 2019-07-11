@@ -35,9 +35,9 @@ namespace Re.Base.Data.Logic
             return block;
         }
 
-        protected override Record GetValue(DataStructure schema, FieldTypeFactory fieldTypeFactory, byte[] bytes)
+        protected override Record GetValue(DataStructure schema, FieldTypeFactory fieldTypeFactory, long currentPosition, byte[] bytes)
         {
-            Record record = new Record() { Fields = new RecordField[schema.Fields.Count] };
+            Record record = new Record() { Fields = new RecordField[schema.Fields.Count], Location = currentPosition };
             MemoryStream stream = new MemoryStream(bytes);
             for (int i = 0; i < schema.Fields.Count; i++)
             {

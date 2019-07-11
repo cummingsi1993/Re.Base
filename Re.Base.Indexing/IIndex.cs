@@ -5,15 +5,21 @@ namespace Re.Base.Indexing
 {
     public interface IIndex<TKey>
     {
-        Task InsertRecord(TKey key, Int64 location);
+        void InsertRecord(TKey key, Int64 location);
 
-        Task DeleteRecord(TKey key);
+        void DeleteRecord(TKey key);
 
-        Task ReassignKey(TKey oldKey, TKey newKey);
+        void ReassignKey(TKey oldKey, TKey newKey);
 
-        Task<Int64> GetRecordLocation(TKey key);
+        Int64 GetRecordLocation(TKey key);
 
-        Task<bool> KeyExists(TKey key);
+        Int64[] GetRecordsAfter(TKey key);
+
+        Int64[] GetRecordsBefore(TKey key);
+
+        Int64[] GetRecordsBetween(TKey key1, TKey key2);
+
+        bool KeyExists(TKey key);
 
     }
 }

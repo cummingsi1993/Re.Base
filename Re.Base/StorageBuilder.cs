@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Re.Base.Data;
 using Re.Base.Queryables.File;
 using Re.Base.Storage;
 
@@ -24,7 +25,8 @@ namespace Re.Base
         public DbSet<TModel> GetDbSet<TModel>()
             where TModel : class
         {
-            return new DbSet<TModel>(fileLocation);
+            DataStore store = new DataStore(fileLocation, typeof(TModel).Name);
+            return new DbSet<TModel>(store);
         }
 
     }

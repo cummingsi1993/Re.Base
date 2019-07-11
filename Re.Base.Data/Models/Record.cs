@@ -9,5 +9,7 @@ namespace Re.Base.Data.Models
 
         public RecordField[] Fields { get; set; }
 
+        public long Location { get; set; }
+
     }
 }

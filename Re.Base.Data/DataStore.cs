@@ -5,6 +5,7 @@ using Re.Base.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Re.Base.Data
@@ -13,7 +14,8 @@ namespace Re.Base.Data
     {
         private FileStream _stream;
         private FileStream _schemaStream;
-        private Indexing.IIndex<byte[]>[] indexes;
+        private IndexManager _indexManager;
+
         private FileHeader _fileHeader;
         private DataStructure _schema;
         private Creation.FieldTypeFactory _fieldTypeFactory;
@@ -21,6 +23,7 @@ namespace Re.Base.Data
         public DataStore(string fileLocation, string recordName)
         {
             _fieldTypeFactory = new Creation.FieldTypeFactory();
+            _indexManager = new IndexManager();
 
             string fileName = $"{fileLocation}/data_{recordName}.rbs";
             string schemaFileName = $"{fileLocation}/schema_{recordName}.rbs";
@@ -55,20 +58,19 @@ namespace Re.Base.Data
                 };
             }
 
-			foreach(IndexDefinition indexDefinition in _schema.Indexes)
-			{
-				string fullIndexPath = $"{fileLocation}/index_{recordName}_{indexDefinition.IndexName}";
-				if (File.Exists(fullIndexPath))
-				{
-					IndexManager indexManager = new IndexManager(File.Open(fullIndexPath, FileMode.Open));
-					_indexes.Add(indexManager);
-				}
-				else
-				{
-					FileStream indexStream = File.Create(fullIndexPath);
-					_indexes.Add(new IndexManager(indexStream));
-				}
-			}
+            foreach(IndexDefinition indexDefinition in _schema.Indexes)
+            {
+                _indexManager.RegisterIndex(_schema.Fields[indexDefinition.FieldId].DataType, indexDefinition);
+            }
+
+            //If there are any in-memory indexes, we will have to build the indexes from scratch by reading in the entire table.
+            if (_schema.Indexes.Exists(i => i.IndexType == Indexing.Enums.IndexType.InMemoryIndex))
+            {
+                foreach (Record record in this.ReadAllRecords())
+                {
+                    _indexManager.AddRecord(record.Fields.Select(f => f.Value).ToArray(), record.Location, _schema);
+                }
+            }
 
         }
 
@@ -103,6 +105,7 @@ namespace Re.Base.Data
         }
 
         #region Schema 
+
         private void ReadSchema()
         {
             _schemaStream.Position = 0;
@@ -118,10 +121,22 @@ namespace Re.Base.Data
             };
 
             bool EOF = false;
+            bool schemaSegment = false;
+
+            while (!EOF && !schemaSegment)
+            {
+                _schema.Fields.Add(_schemaStream.ReadFieldDefinition());
+                byte potentialSegmentChange = _schemaStream.PeekByte();
+
+                if (potentialSegmentChange == Constants.Tokens.SchemaSegmentSeperationToken) schemaSegment = true;
+                if (_schemaStream.Length <= _schemaStream.Position) EOF = true;
+            }
+
+            if (schemaSegment) _schemaStream.ReadByte();
 
             while (!EOF)
             {
-                _schema.Fields.Add(_schemaStream.ReadFieldDefinition());
+                _schema.Indexes.Add(_schemaStream.ReadIndexDefinition());
                 if (_schemaStream.Length <= _schemaStream.Position) EOF = true;
             }
         }
@@ -134,6 +149,13 @@ namespace Re.Base.Data
             foreach(FieldDefinition field in _schema.Fields)
             {
                 _schemaStream.WriteFieldDefinition(field);
+            }
+
+            _schemaStream.WriteByte(Constants.Tokens.SchemaSegmentSeperationToken);
+
+            foreach(IndexDefinition index in _schema.Indexes)
+            {
+                _schemaStream.WriteIndexDefinition(index);
             }
 
             //Truncate the stream
@@ -170,6 +192,14 @@ namespace Re.Base.Data
             }
         }
 
+        public void AddIndex(int fieldId, string name, Indexing.Enums.IndexType type)
+        {
+            var definition = new IndexDefinition() { FieldId = fieldId, IndexName = name, IndexType = type };
+            _indexManager.RegisterIndex(_schema.Fields[fieldId].DataType, definition);
+            _schema.Indexes.Add(definition);
+            this.WriteSchema();
+        }
+
         public DataStructure GetSchema()
         {
             return _schema;
@@ -179,6 +209,8 @@ namespace Re.Base.Data
 
         public void InsertRecord(params object[] fields)
         {
+            long insertLocation;
+
             //Find available spot to place record....
             if (_fileHeader.BlocksInFile == 0)
             {
@@ -188,7 +220,8 @@ namespace Re.Base.Data
                 _fileHeader.BlocksInFile++;
                 WriteFileHeader();
 
-                block.Insert(fields);
+                insertLocation = block.Insert(fields);
+
 
             }
             else
@@ -196,20 +229,19 @@ namespace Re.Base.Data
                 var lastBlock = RecordBlock.LoadFromStream(_stream, _schema, _fileHeader.BlocksInFile - 1);
                 if (lastBlock.BlockHeader.FreeBytes > _schema.GetRecordSize())
                 {
-                    lastBlock.Insert(fields);
+                    insertLocation = lastBlock.Insert(fields);
                 }
                 else
                 {
                     var newBlock = RecordBlock.CreateNew(_stream, _schema, _fileHeader.BlocksInFile);
-                    newBlock.Insert(fields);
+                    insertLocation = newBlock.Insert(fields);
 
                     _fileHeader.BlocksInFile++;
                     WriteFileHeader();
                 }
             }
-            
 
-            
+            _indexManager.AddRecord(fields, insertLocation, _schema);
         }
 
         public Record[] ReadAllRecords()
@@ -222,6 +254,20 @@ namespace Re.Base.Data
             }
 
             return records.ToArray();
+        }
+
+        public Record ReadRecordFromPointer(long pointer)
+        {
+            int totalBlockLength = Constants.Lengths.BlockLength + Constants.Lengths.BlockHeaderLength;
+            long pointerInBody = pointer - Constants.Lengths.FileHeaderLength;
+
+            int blockNumber = (int)Math.Floor((decimal)pointerInBody / totalBlockLength);
+
+            long remainingBytes = pointerInBody - (blockNumber * totalBlockLength);
+            long trueIndex = (int)(remainingBytes / _schema.GetRecordSize());
+            
+            var block = RecordBlock.LoadFromStream(_stream, _schema, blockNumber - 1);
+            return block.Read(trueIndex);
         }
 
         public Record ReadRecord(long index)
@@ -253,6 +299,19 @@ namespace Re.Base.Data
             }
 
             return records.ToArray();
+        }
+
+        public Record[] QueryBy(int fieldId, object fieldValue)
+        {
+            if (_indexManager.FieldIsIndexed(fieldId))
+            {
+                long pointer = _indexManager.GetLocationFromIndex(fieldId, fieldValue, _schema);
+                return new Record[] { this.ReadRecordFromPointer(pointer) };
+            }
+            else
+            {
+                return this.Query(r => r.Fields[fieldId].Value == fieldValue);
+            }
         }
 
         #region Helper Functions

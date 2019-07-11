@@ -23,4 +23,9 @@
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Re.Base.Data\Re.Base.Data.csproj" />
+    <ProjectReference Include="..\Re.Base.Mapping\Re.Base.Mapping.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -15,5 +15,7 @@ namespace Re.Base.Data.Constants
         public const int LittleStringLength = 100;
         public const int BigStringLength = 1000;
 
+        public const int IndexNameLength = 50;
+
     }
 }

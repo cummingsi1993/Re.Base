@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Re.Base.Data.Logic
+namespace Re.Base.Mapping.Attributes
 {
-    public class RecordBlockManager
+    class IndexAttribute
     {
-
-
-
     }
 }

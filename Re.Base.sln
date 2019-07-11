@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Re.Base.Linq", "Re.Base.Lin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Re.Base.Data", "Re.Base.Data\Re.Base.Data.csproj", "{BEB448B6-EA73-44EA-AE35-C9CBB4BE0F7D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Re.Base.Indexing", "Re.Base.Indexing\Re.Base.Indexing.csproj", "{1541936A-2BB2-4CA0-9DFE-FF72754D0DDD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Re.Base.Indexing", "Re.Base.Indexing\Re.Base.Indexing.csproj", "{1541936A-2BB2-4CA0-9DFE-FF72754D0DDD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Re.Base.Mapping", "Re.Base.Mapping\Re.Base.Mapping.csproj", "{32964466-3D6E-4522-A544-6E57EA11D37A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{1541936A-2BB2-4CA0-9DFE-FF72754D0DDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1541936A-2BB2-4CA0-9DFE-FF72754D0DDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1541936A-2BB2-4CA0-9DFE-FF72754D0DDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32964466-3D6E-4522-A544-6E57EA11D37A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32964466-3D6E-4522-A544-6E57EA11D37A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32964466-3D6E-4522-A544-6E57EA11D37A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32964466-3D6E-4522-A544-6E57EA11D37A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -35,7 +35,7 @@ namespace Re.Base.Data.Models
 	{
 		public string IndexName { get; set; }
         public Indexing.Enums.IndexType IndexType { get; set; }
-		public int[] FieldIds { get; set; }
+		public int FieldId { get; set; }
 	}
 
     public enum DataType

@@ -7,11 +7,12 @@ namespace Re.Base.Indexing.Creation
     public static class IndexFactory
     {
 
-        public static IIndex<byte[]> CreateIndex(Enums.IndexType type)
+        public static IIndex<TKey> CreateIndex<TKey>(Enums.IndexType type)
+            where TKey : IComparable
         {
             switch(type)
             {
-                case Enums.IndexType.InMemoryIndex: return new Indexes.InMemoryIndex();
+                case Enums.IndexType.InMemoryIndex: return new Indexes.InMemoryIndex<TKey>();
                 default: throw new Exception();
             }
         }

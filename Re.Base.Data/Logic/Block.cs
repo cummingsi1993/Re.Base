@@ -50,8 +50,9 @@ namespace Re.Base.Data.Logic
 
         public TModel ReadNext()
         {
+            long currentPosition = _stream.Position;
             byte[] valueBytes = ReadNextBytes();
-            return this.GetValue(_schema, _fieldTypeFactory, valueBytes);
+            return this.GetValue(_schema, _fieldTypeFactory, currentPosition, valueBytes);
         }
 
         public TModel Read(long index)
@@ -95,10 +96,11 @@ namespace Re.Base.Data.Logic
             _stream.SeekToBlockContents(Index);
             for (int i = 0; i < BlockHeader.RecordCount; i++)
             {
+                long currentPosition = _stream.Position;
                 byte[] modelBytes = ReadNextBytes();
                 if (func(modelBytes))
                 {
-                    models.Add(GetValue(_schema, _fieldTypeFactory, modelBytes));
+                    models.Add(GetValue(_schema, _fieldTypeFactory, currentPosition, modelBytes));
                 }
             }
 
@@ -109,7 +111,12 @@ namespace Re.Base.Data.Logic
 
         #region Write Data
 
-        public void Insert(params object[] fields)
+        /// <summary>
+        /// Inserts the record returns the location at which it was inserted. 
+        /// </summary>
+        /// <param name="fields"></param>
+        /// <returns></returns>
+        public long Insert(params object[] fields)
         {
 
             _stream.SeekToRecord(_schema, BlockHeader.BlockSequence, BlockHeader.RecordCount);
@@ -133,6 +140,8 @@ namespace Re.Base.Data.Logic
                 }
             }
 
+            long recordLocation = _stream.Position;
+
             //Only if there are no failures, we start writing to the file
             for (int i = 0; i < fields.Length; i++)
             {
@@ -146,11 +155,12 @@ namespace Re.Base.Data.Logic
             _stream.Flush();
             this.WriteBlockHeader();
 
+            return recordLocation;
         }
 
         #endregion
 
-        protected abstract TModel GetValue(DataStructure schema, Creation.FieldTypeFactory fieldTypeFactory, byte[] bytes);
+        protected abstract TModel GetValue(DataStructure schema, Creation.FieldTypeFactory fieldTypeFactory, long recordLocation, byte[] bytes);
         
 
 

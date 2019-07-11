@@ -17,6 +17,13 @@ namespace Re.Base.Data.Extensions
         #endregion
 
         #region Read Functions
+        public static Byte PeekByte(this Stream stream)
+        {
+            byte next = (byte)stream.ReadByte();
+            stream.Position--;
+            return next;
+        }
+
         public static Boolean ReadBoolean(this Stream stream)
         {
             return stream.ReadByte() == 1;
@@ -24,8 +31,8 @@ namespace Re.Base.Data.Extensions
 
         public static Int16 ReadInt16(this Stream stream)
         {
-            byte[] bytes = new byte[4];
-            stream.Read(bytes, 0, 4);
+            byte[] bytes = new byte[2];
+            stream.Read(bytes, 0, 2);
 
             return BitConverter.ToInt16(bytes, 0);
         }
@@ -88,6 +95,53 @@ namespace Re.Base.Data.Extensions
             }
         }
 
+        public static IndexDefinition ReadIndexDefinition(this Stream stream)
+        {
+            string name = stream.ReadAsciiString(Lengths.IndexNameLength);
+            short typeId = stream.ReadInt16();
+            Indexing.Enums.IndexType type =
+                typeId == 1 ? Indexing.Enums.IndexType.InMemoryIndex :
+                throw new Exception();
+
+            //int fieldCount = stream.ReadInt32();
+
+            //int[] fields = new int[fieldCount];
+
+            //for (int i = 0; i < fieldCount; i++)
+            //{
+            //    fields[i] = stream.ReadInt32();
+            //}
+
+            int fieldId = stream.ReadInt32();
+
+            return new IndexDefinition()
+            {
+                IndexName = name,
+                IndexType = type,
+                FieldId = fieldId
+            };
+        }
+
+        public static void WriteIndexDefinition(this Stream stream, IndexDefinition definition)
+        {
+            stream.WriteAsciiString(definition.IndexName, Lengths.IndexNameLength);
+
+            short typeId = definition.IndexType == Indexing.Enums.IndexType.InMemoryIndex ? (short)1 :
+                throw new Exception();
+
+            stream.WriteInt16(typeId);
+
+            stream.WriteInt32(definition.FieldId);
+
+            //stream.WriteInt32(definition.FieldIds.Length);
+            
+            //foreach(int fieldId in definition.FieldIds)
+            //{
+            //    stream.WriteInt32(fieldId);
+            //}
+
+        }
+
         public static FieldDefinition ReadFieldDefinition(this Stream stream)
         {
             FieldDefinition field = new FieldDefinition();
@@ -131,7 +185,7 @@ namespace Re.Base.Data.Extensions
             //The file header is corrupt
             if (headerBytes[0] != Tokens.FileBeginToken)
             {
-                throw new InvalidOperationException();
+                    throw new InvalidOperationException();
             }
 
             long blockCount = BitConverter.ToInt64(headerBytes, 1);

@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Re.Base.Data\Re.Base.Data.csproj" />
+    <ProjectReference Include="..\Re.Base.Mapping\Re.Base.Mapping.csproj" />
     <ProjectReference Include="..\Re.Base\Re.Base.csproj" />
   </ItemGroup>
 

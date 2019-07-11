@@ -24,6 +24,32 @@ namespace Re.Base.Client
         static async Task Run()
         {
 
+            var instructions = StorageBuilder.CreateFileBasedStorage(@"C:\Temp\ReBase")
+                .GetDbSet<Instruction>();
+
+            instructions.Add(new Instruction()
+            {
+                Id = 1,
+                Barcode = "XXXXXXX",
+                Date_Of_Birth = new DateTime(1993, 2, 19),
+                Lab_Location = "LCA",
+                Sex = "F",
+                Test = false,
+                Time_Created = DateTime.Now,
+                Time_Updated = DateTime.Now
+            });
+
+            foreach (Instruction i in instructions)
+            {
+                Console.WriteLine(i.Barcode);
+            }
+
+            
+
+        }
+
+        private async static Task OldRun()
+        {
 
             //var instructions = StorageBuilder.CreateFileBasedStorage("D:\\Temp\\ReBase")
             //    .GetDbSet<Instruction>();
@@ -35,6 +61,11 @@ namespace Re.Base.Client
 
             timer.Start();
             var record = manager.ReadRecord(1);
+
+            var record56 = manager.QueryBy(0, 50000);
+            var record56Slow = manager.Query(r => (int)r.Fields[0].Value == 50000);
+
+
             timer.Stop();
 
             Console.Write(timer.ElapsedMilliseconds);
@@ -52,11 +83,11 @@ namespace Re.Base.Client
 
             var record10 = manager.Query(x => (int)x.Fields[0].Value == 350000);
 
-            
 
-			//var people = (from Person person in persons
-			//			  where person.Tags.Contains("ipsum")
-			//			  select person.Tags).ToList();
+
+            //var people = (from Person person in persons
+            //			  where person.Tags.Contains("ipsum")
+            //			  select person.Tags).ToList();
 
             //var peopleThatHaveIpsumTwice = (from Person person in persons
             //                                where person.Tags.Count(x => x == "ipsum") > 1
@@ -65,7 +96,6 @@ namespace Re.Base.Client
             //var p = persons.Find(new Guid("932c9159-f8b7-42ce-8a18-3e6388ace0d3"));
 
             Console.ReadLine();
-          
 
         }
 
@@ -85,6 +115,9 @@ namespace Re.Base.Client
             store.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeCreated", Nullable = false });
             store.AddField(new FieldDefinition() { DataType = DataType.DateTime, FieldName = "TimeUpdated", Nullable = false });
 
+            store.AddIndex(0, "id", Indexing.Enums.IndexType.InMemoryIndex);
+
+            
 
             DateTime dateOfBirth = new DateTime(1995, 4, 23);
 

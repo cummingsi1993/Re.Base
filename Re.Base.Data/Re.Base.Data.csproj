@@ -10,4 +10,8 @@
     <None Remove="Exceptions\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Re.Base.Indexing\Re.Base.Indexing.csproj" />
+  </ItemGroup>
+
 </Project>

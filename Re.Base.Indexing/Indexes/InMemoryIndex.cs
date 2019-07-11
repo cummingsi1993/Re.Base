@@ -1,14 +1,16 @@
 ﻿using Re.Base.Indexing.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Re.Base.Indexing.Indexes
 {
     public class InMemoryIndex<TKey> : IIndex<TKey>
+        where TKey : IComparable
     {
-        private Dictionary<TKey, long> _index;
+        private SortedDictionary<TKey, long> _index;
 
         #region Private Methods 
 
@@ -17,9 +19,9 @@ namespace Re.Base.Indexing.Indexes
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        private async Task CheckDuplicateKey(TKey key)
+        private void CheckDuplicateKey(TKey key)
         {
-            if (await KeyExists(key))
+            if (KeyExists(key))
             {
                 throw new KeyNotFoundException<TKey>(key);
             }
@@ -31,9 +33,9 @@ namespace Re.Base.Indexing.Indexes
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        private async Task CheckKeyExists(TKey key)
+        private void CheckKeyExists(TKey key)
         {
-            if (!await KeyExists(key))
+            if (!KeyExists(key))
             {
                 throw new KeyNotFoundException<TKey>(key);
             }
@@ -43,49 +45,96 @@ namespace Re.Base.Indexing.Indexes
 
         public InMemoryIndex()
         {
-            _index = new Dictionary<TKey, long>();
+            _index = new SortedDictionary<TKey, long>();
 
         }
 
-        public async Task DeleteRecord(TKey key)
+        public void DeleteRecord(TKey key)
         {
-            await CheckKeyExists(key);
+            CheckKeyExists(key);
 
             _index.Remove(key);
         }
 
-        public async Task<long> GetRecordLocation(TKey key)
+        public long GetRecordLocation(TKey key)
         {
-            await CheckKeyExists(key);
+            CheckKeyExists(key);
 
             return _index[key];
         }
 
-        public async Task InsertRecord(TKey key, long location)
+        public long[] GetRecordsAfter(TKey key)
         {
-            await CheckDuplicateKey(key);
+            //Super slow, needs refactor.
+            //We should be able to leverage the fact that the underlying structure of a sorted dictionary is a b-tree.
+            TKey[] keysAfter = _index.Keys
+                .Where(x => x.CompareTo(key) >= 0)
+                .ToArray();
+
+            long[] results = new long[keysAfter.Length];
+
+            for (int i = 0; i < keysAfter.Length; i++)
+            {
+                results[i] = _index[keysAfter[i]];
+            }
+
+            return results;
+        }
+
+        public long[] GetRecordsBefore(TKey key)
+        {
+            //Super slow, needs refactor.
+            //We should be able to leverage the fact that the underlying structure of a sorted dictionary is a b-tree.
+            TKey[] keysAfter = _index.Keys
+                .Where(x => x.CompareTo(key) <= 0)
+                .ToArray();
+
+            long[] results = new long[keysAfter.Length];
+
+            for (int i = 0; i < keysAfter.Length; i++)
+            {
+                results[i] = _index[keysAfter[i]];
+            }
+
+            return results;
+        }
+
+        public long[] GetRecordsBetween(TKey key1, TKey key2)
+        {
+            //Super slow, needs refactor.
+            //We should be able to leverage the fact that the underlying structure of a sorted dictionary is a b-tree.
+            TKey[] keysAfter = _index.Keys
+                .Where(x => x.CompareTo(key1) >= 0 && x.CompareTo(key2) <= 0)
+                .ToArray();
+
+            long[] results = new long[keysAfter.Length];
+
+            for (int i = 0; i < keysAfter.Length; i++)
+            {
+                results[i] = _index[keysAfter[i]];
+            }
+
+            return results;
+        }
+
+        public void InsertRecord(TKey key, long location)
+        {
+            CheckDuplicateKey(key);
 
             _index.Add(key, location);
         }
 
-        public async Task<bool> KeyExists(TKey key)
+        public bool KeyExists(TKey key)
         {
             return _index.ContainsKey(key);
         }
 
-        public async Task ReassignKey(TKey oldKey, TKey newKey)
+        public void ReassignKey(TKey oldKey, TKey newKey)
         {
-            await CheckDuplicateKey(newKey);
-            await CheckKeyExists(oldKey);
+            CheckDuplicateKey(newKey);
+            CheckKeyExists(oldKey);
 
         }
-    }
-
-    public class InMemoryIndex : InMemoryIndex<byte[]>
-    {
-
-
-
     }
 
 }

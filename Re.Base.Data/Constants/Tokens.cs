@@ -20,6 +20,7 @@ namespace Re.Base.Data.Constants
         public const byte FileBeginToken = 0x000A;
         public const byte BlockBeginToken = 0x000B;
         public const byte RecordBeginToken = 0x000C;
+        public const byte SchemaSegmentSeperationToken = 0x00D;
 
     }
 }

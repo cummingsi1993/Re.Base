@@ -1,5 +1,6 @@
-﻿//using Re.Base.Logic;
-//using Re.Base.Models;
+﻿using Re.Base.Data;
+using Re.Base.Mapping.Logic;
+using Re.Base.Queryables.Data;
 using Re.Base.Queryables.File;
 using Re.Base.Readers;
 using Re.Base.Writers;
@@ -11,68 +12,35 @@ using System.Text;
 
 namespace Re.Base.Storage
 {
-    public class DbSet<TModel> : FileQueryable<TModel>
+    public class DbSet<TModel> : DataQueryable<TModel>
         where TModel : class
     {
-        private string databaseLocation;
-        //private Index<TModel> index;
+        private DataStore _store;
+        
 
-        public DbSet(FileQueryProvider provider, Expression expression) : base(provider, expression)
+        public DbSet(DataQueryProvider provider, Expression expression) : base(provider, expression)
         {
-            //this.index = new Index<TModel>();
         }
 
-        public DbSet(string databaseLocation) : base(databaseLocation)
+        public DbSet(DataStore store) : base(store)
         {
-            this.databaseLocation = databaseLocation;
-            //this.index = new Index<TModel>();
-        }
-
-        public TModel Find(Guid recordKey)
-        {
-            var query = new Queryables.RebaseQuery();
-            query.AddSource(typeof(TModel));
-
-            FileReader<TModel> reader = new FileReader<TModel>(databaseLocation, query);
-            return reader.FindById(recordKey);
-        }
-
-        public TModel Find(long recordKey)
-        {
-            var query = new Queryables.RebaseQuery();
-            query.AddSource(typeof(TModel));
-
-            FileReader<TModel> reader = new FileReader<TModel>(databaseLocation, query);
-            return reader.FindById(recordKey);
+            _store = store;
         }
 
 		public void AddRange(IEnumerable<TModel> models)
 		{
-			FileWriter<TModel> writer = new FileWriter<TModel>(databaseLocation);
+            var mapper = new RecordMapper();
 
 			foreach (TModel model in models)
 			{
-                writer.WriteNewModel(model);
-			}
-
+                _store.InsertRecord(mapper.MapToFields(model));
+            }
 		}
 
         public void Add(TModel model)
         {
-            string sourceName = typeof(TModel).Name;
-            string fileName = $"{databaseLocation}/data_{sourceName}.rbs";
-
-            
-
-			string serializedModel = Newtonsoft.Json.JsonConvert.SerializeObject(model);
-
-            if (!System.IO.File.Exists(fileName))
-            {
-                System.IO.File.Create(fileName).Close();
-            }
-
-            System.IO.File.AppendAllLines(fileName, new string[] { serializedModel });
-
+            var mapper = new RecordMapper();
+            _store.InsertRecord(mapper.MapToFields(model));
         }
 
 

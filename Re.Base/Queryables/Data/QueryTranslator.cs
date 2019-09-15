@@ -69,6 +69,14 @@ namespace Re.Base.Queryables.Data
 
                 return m;
             }
+            else if (m.Method.DeclaringType == typeof(Queryable) && m.Method.Name == "FirstOrDefault")
+            {
+                this.Visit(m.Arguments[0]);
+                query.ApplyTop(1);
+
+                
+                return m;
+            }
             else
             {
                 return base.VisitMethodCall(m);

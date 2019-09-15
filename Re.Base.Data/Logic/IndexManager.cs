@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Re.Base.Data.Logic
@@ -65,7 +66,7 @@ namespace Re.Base.Data.Logic
         public void RegisterIndex(Models.DataType type, IndexDefinition indexDefinition)
         {
 
-            if(type == DataType.Boolean)
+            if (type == DataType.Boolean)
             {
                 _booleanIndexes.Add(indexDefinition.FieldId, Indexing.Creation.IndexFactory.CreateIndex<bool>(indexDefinition.IndexType));
             }
@@ -109,6 +110,61 @@ namespace Re.Base.Data.Logic
                 || _dateTimeIndexes.ContainsKey(fieldId);
         }
 
+        public bool AnyFieldIsIndexed()
+        {
+            return _booleanIndexes.Count > 0
+                || _int16Indexes.Count > 0
+                || _int32Indexes.Count > 0
+                || _int64Indexes.Count > 0
+                || _stringIndexes.Count > 0
+                || _decimalIndexes.Count > 0
+                || _dateTimeIndexes.Count > 0;
+        }
+
+        public long Count()
+        {
+            if (_booleanIndexes.Count > 0)
+            {
+                Indexing.IIndex<bool> index = _booleanIndexes[_booleanIndexes.Keys.First()];
+                return index.CountRecords();
+
+            }
+            else if (_int16Indexes.Count > 0)
+            {
+                Indexing.IIndex<Int16> index = _int16Indexes[_int16Indexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else if (_int32Indexes.Count > 0)
+            {
+                Indexing.IIndex<Int32> index = _int32Indexes[_int32Indexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else if (_int64Indexes.Count > 0)
+            {
+                Indexing.IIndex<Int64> index = _int64Indexes[_int64Indexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else if (_stringIndexes.Count > 0)
+            {
+                Indexing.IIndex<string> index = _stringIndexes[_stringIndexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else if (_decimalIndexes.Count > 0)
+            {
+                Indexing.IIndex<decimal> index = _decimalIndexes[_decimalIndexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else if (_dateTimeIndexes.Count > 0)
+            {
+                Indexing.IIndex<DateTime> index = _dateTimeIndexes[_dateTimeIndexes.Keys.First()];
+                return index.CountRecords();
+            }
+            else
+            {
+                throw new Exception();
+            }
+        }
+
         public long GetLocationFromIndex(int fieldId, object fieldValue, DataStructure currentSchema)
         {
             var type = currentSchema.Fields[fieldId].DataType;
@@ -146,7 +202,7 @@ namespace Re.Base.Data.Logic
                 throw new Exception();
             }
 
-            
+
         }
 
         public void AddRecord(object[] fields, long recordLocation, DataStructure currentSchema)

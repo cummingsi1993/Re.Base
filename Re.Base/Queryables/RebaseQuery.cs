@@ -9,6 +9,8 @@ namespace Re.Base.Queryables
 
         private List<Func<object, bool>> filters = new List<Func<object, bool>>();
         private List<Func<object, object>> selects = new List<Func<object, object>>();
+        private int? _count = null;
+
         private Type source;
 
         internal void AddWhereFilter(Func<object, bool> filter)
@@ -24,6 +26,11 @@ namespace Re.Base.Queryables
         internal void AddSource(Type sourceType)
         {
             source = sourceType;
+        }
+
+        internal void ApplyTop(int count)
+        {
+            _count = count;
         }
 
         internal bool ApplyFilter(object model)

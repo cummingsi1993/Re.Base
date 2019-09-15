@@ -17,6 +17,7 @@ namespace Re.Base.Data.Creation
             var int16Type = new Int16FieldType();
             var int32Type = new Int32FieldType();
             var int64Type = new Int64FieldType();
+            var decimalType = new DecimalFieldType();
             var boolType = new BoolFieldType();
             var dateType = new DateTimeFieldType();
             var littleStringType = new LittleStringFieldType();

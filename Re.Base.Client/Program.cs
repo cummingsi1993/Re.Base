@@ -24,27 +24,28 @@ namespace Re.Base.Client
         static async Task Run()
         {
 
-            var instructions = StorageBuilder.CreateFileBasedStorage(@"C:\Temp\ReBase")
-                .GetDbSet<Instruction>();
+            DataAccess.DAL dal = new DataAccess.DAL();
 
-            instructions.Add(new Instruction()
-            {
-                Id = 1,
-                Barcode = "XXXXXXX",
-                Date_Of_Birth = new DateTime(1993, 2, 19),
-                Lab_Location = "LCA",
-                Sex = "F",
-                Test = false,
-                Time_Created = DateTime.Now,
-                Time_Updated = DateTime.Now
-            });
+            var orderItem5 = dal.OrderItems.Where(o => o.Id == 5).ToArray();
 
-            foreach (Instruction i in instructions)
-            {
-                Console.WriteLine(i.Barcode);
-            }
 
-            
+            dal.Orders.Add(new Order() { Id = 1 });
+
+            dal.OrderItems.Add(new OrderItem() { Id = 1, Quantity = 2, UnitPrice = 3 });
+            dal.OrderItems.Add(new OrderItem() { Id = 2, Quantity = 5, UnitPrice = 65 });
+            dal.OrderItems.Add(new OrderItem() { Id = 3, Quantity = 2, UnitPrice = 23 });
+            dal.OrderItems.Add(new OrderItem() { Id = 4, Quantity = 22, UnitPrice = 7 });
+            dal.OrderItems.Add(new OrderItem() { Id = 5, Quantity = 1, UnitPrice = 2 });
+            dal.OrderItems.Add(new OrderItem() { Id = 6, Quantity = 23, UnitPrice = 6 });
+            dal.OrderItems.Add(new OrderItem() { Id = 7, Quantity = 7, UnitPrice = 1 });
+            dal.OrderItems.Add(new OrderItem() { Id = 8, Quantity = 6, UnitPrice = 2 });
+            dal.OrderItems.Add(new OrderItem() { Id = 9, Quantity = 28, UnitPrice = 4 });
+            dal.OrderItems.Add(new OrderItem() { Id = 10, Quantity = 250, UnitPrice = 1 });
+
+
+
+
+
 
         }
 

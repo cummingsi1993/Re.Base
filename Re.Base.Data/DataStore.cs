@@ -40,7 +40,7 @@ namespace Re.Base.Data
                     BlocksInFile = 0
                 };
 
-
+                WriteFileHeader();
             }
 
             if (File.Exists(schemaFileName))
@@ -56,6 +56,9 @@ namespace Re.Base.Data
                     Fields = new List<FieldDefinition>(),
                     Indexes = new List<IndexDefinition>()
                 };
+
+                WriteSchema();
+
             }
 
             foreach(IndexDefinition indexDefinition in _schema.Indexes)
@@ -71,6 +74,9 @@ namespace Re.Base.Data
                     _indexManager.AddRecord(record.Fields.Select(f => f.Value).ToArray(), record.Location, _schema);
                 }
             }
+
+            _schemaStream.Flush();
+            _stream.Flush();
 
         }
 
@@ -121,7 +127,7 @@ namespace Re.Base.Data
             };
 
             bool EOF = false;
-            bool schemaSegment = false;
+            bool schemaSegment = (_schemaStream.PeekByte() == Constants.Tokens.SchemaSegmentSeperationToken);
 
             while (!EOF && !schemaSegment)
             {
@@ -133,6 +139,8 @@ namespace Re.Base.Data
             }
 
             if (schemaSegment) _schemaStream.ReadByte();
+
+            EOF = (_schemaStream.Length <= _schemaStream.Position);
 
             while (!EOF)
             {
@@ -244,6 +252,25 @@ namespace Re.Base.Data
             _indexManager.AddRecord(fields, insertLocation, _schema);
         }
 
+        public void UpdateRecordAtPointer(long pointer, params object[] fields)
+        {
+            int totalBlockLength = Constants.Lengths.BlockLength + Constants.Lengths.BlockHeaderLength;
+            long pointerInBody = pointer - Constants.Lengths.FileHeaderLength;
+
+            int blockNumber = (int)Math.Floor((decimal)pointerInBody / totalBlockLength);
+
+            long remainingBytes = pointerInBody - (blockNumber * totalBlockLength);
+            long trueIndex = (int)(remainingBytes / _schema.GetRecordSize());
+
+            var block = RecordBlock.LoadFromStream(_stream, _schema, blockNumber - 1);
+            block.Update(trueIndex, fields);
+        }
+
+        public void UpdateRecordAtIndex(long index, params object[] fields)
+        {
+
+        }
+
         public Record[] ReadAllRecords()
         {
             List<Record> records = new List<Record>();
@@ -278,7 +305,7 @@ namespace Re.Base.Data
             {
                 var block = RecordBlock.LoadFromStream(_stream, _schema, i);
                 //the index is less than the upper bound of this block
-                if (index < totalIndex + block.BlockHeader.RecordCount)
+                if (index <= totalIndex + block.BlockHeader.RecordCount)
                 {
                     return block.Read(index - totalIndex);
                 }
@@ -314,11 +341,28 @@ namespace Re.Base.Data
             }
         }
 
+        public long Length()
+        {
+            //If there is an index, it will be WAY faster to count the index.
+            if (_indexManager.AnyFieldIsIndexed())
+            {
+                return _indexManager.Count();
+            }
+
+            long length = 0;
+
+            for (int i = 0; i < this._fileHeader.BlocksInFile; i++)
+            {
+                var block = RecordBlock.LoadFromStream(_stream, _schema, i);
+                length += block.BlockHeader.RecordCount;
+            }
+
+            return length;
+        }
+
+
+
         #region Helper Functions
-
-
-
-
 
         private void FillArray(byte[] bytes, long count, long startingIndex = 0)
         {

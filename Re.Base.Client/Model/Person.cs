@@ -33,8 +33,6 @@ namespace Re.Base.Client.Model
 		public string Registered { get; set; }
 		public decimal Latitude { get; set; }
 		public decimal Longitude { get; set; }
-		//public string[] Tags { get; set; }
-		//public int[] Range { get; set; }
         
 		public string Greeting { get; set; }
 		public string FavoriteFruit { get; set; }

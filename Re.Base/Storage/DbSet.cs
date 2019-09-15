@@ -3,7 +3,6 @@ using Re.Base.Mapping.Logic;
 using Re.Base.Queryables.Data;
 using Re.Base.Queryables.File;
 using Re.Base.Readers;
-using Re.Base.Writers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,7 +28,7 @@ namespace Re.Base.Storage
 
 		public void AddRange(IEnumerable<TModel> models)
 		{
-            var mapper = new RecordMapper();
+            var mapper = new RecordMapper(_store.GetSchema());
 
 			foreach (TModel model in models)
 			{
@@ -39,7 +38,7 @@ namespace Re.Base.Storage
 
         public void Add(TModel model)
         {
-            var mapper = new RecordMapper();
+            var mapper = new RecordMapper(_store.GetSchema());
             _store.InsertRecord(mapper.MapToFields(model));
         }
 

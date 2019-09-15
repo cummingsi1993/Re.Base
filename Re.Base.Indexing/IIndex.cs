@@ -11,6 +11,8 @@ namespace Re.Base.Indexing
 
         void ReassignKey(TKey oldKey, TKey newKey);
 
+        long CountRecords();
+
         Int64 GetRecordLocation(TKey key);
 
         Int64[] GetRecordsAfter(TKey key);

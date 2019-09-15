@@ -4,7 +4,11 @@ using System.Text;
 
 namespace Re.Base.Mapping.Attributes
 {
-    class IndexAttribute
+    public class IndexAttribute : Attribute
     {
+
+
+
+
     }
 }

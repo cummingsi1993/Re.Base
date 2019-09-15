@@ -111,16 +111,8 @@ namespace Re.Base.Data.Logic
 
         #region Write Data
 
-        /// <summary>
-        /// Inserts the record returns the location at which it was inserted. 
-        /// </summary>
-        /// <param name="fields"></param>
-        /// <returns></returns>
-        public long Insert(params object[] fields)
+        private void WriteFields(object[] fields)
         {
-
-            _stream.SeekToRecord(_schema, BlockHeader.BlockSequence, BlockHeader.RecordCount);
-
             IDataFieldType[] fieldTypes = new IDataFieldType[fields.Length];
 
             for (int i = 0; i < fields.Length; i++)
@@ -140,8 +132,6 @@ namespace Re.Base.Data.Logic
                 }
             }
 
-            long recordLocation = _stream.Position;
-
             //Only if there are no failures, we start writing to the file
             for (int i = 0; i < fields.Length; i++)
             {
@@ -149,10 +139,36 @@ namespace Re.Base.Data.Logic
                 fieldTypes[i].WriteToStream(_stream, field);
             }
 
+            _stream.Flush();
+        }
+
+        /// <summary>
+        /// Updates the record at the specified index with the fields passed in.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="fields"></param>
+        public void Update(long index, params object[] fields)
+        {
+            _stream.SeekToRecord(_schema, this.Index, index);
+            WriteFields(fields);
+        }
+
+        /// <summary>
+        /// Inserts the record returns the location at which it was inserted. 
+        /// </summary>
+        /// <param name="fields"></param>
+        /// <returns></returns>
+        public long Insert(params object[] fields)
+        {
+            //TODO : Seek to the next available space, not just the end.
+            _stream.SeekToRecord(_schema, BlockHeader.BlockSequence, BlockHeader.RecordCount);
+            long recordLocation = _stream.Position;
+
+            this.WriteFields(fields);
 
             BlockHeader.FreeBytes -= _schema.GetRecordSize();
             BlockHeader.RecordCount++;
-            _stream.Flush();
+            
             this.WriteBlockHeader();
 
             return recordLocation;

@@ -5,22 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Creation\**" />
-    <Compile Remove="Interfaces\**" />
-    <Compile Remove="Logic\**" />
-    <Compile Remove="Models\**" />
-    <EmbeddedResource Remove="Creation\**" />
-    <EmbeddedResource Remove="Interfaces\**" />
-    <EmbeddedResource Remove="Logic\**" />
-    <EmbeddedResource Remove="Models\**" />
-    <None Remove="Creation\**" />
-    <None Remove="Interfaces\**" />
-    <None Remove="Logic\**" />
-    <None Remove="Models\**" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <Folder Include="Writers\" />
   </ItemGroup>
 
   <ItemGroup>

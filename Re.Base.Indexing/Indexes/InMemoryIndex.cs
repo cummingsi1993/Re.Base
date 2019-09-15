@@ -63,6 +63,11 @@ namespace Re.Base.Indexing.Indexes
             return _index[key];
         }
 
+        public long CountRecords()
+        {
+            return _index.Count;
+        }
+
         public long[] GetRecordsAfter(TKey key)
         {
             //Super slow, needs refactor.

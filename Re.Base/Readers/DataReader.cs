@@ -4,6 +4,7 @@ using Re.Base.Queryables;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Re.Base.Readers
@@ -22,34 +23,49 @@ namespace Re.Base.Readers
 
         public IEnumerator<TModel> GetEnumerator()
         {
-            return new Enumerator(_store);
+            return new Enumerator(_store, _query);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new Enumerator(_store);
+            return new Enumerator(_store, _query);
         }
 
         class Enumerator : IEnumerator<TModel>, IEnumerator, IDisposable
         {
             private DataStore _store;
-            private int _currentIndex = 0;
+            private long _currentIndex = 0;
             private RecordMapper _mapper;
+            private long _count;
+            private TModel _current;
+            private RebaseQuery _query;
 
-            public Enumerator(DataStore store)
+            public Enumerator(DataStore store, RebaseQuery query)
             {
                 _store = store;
-                _mapper = new RecordMapper();
+                _mapper = new RecordMapper(store.GetSchema());
+                _count = _store.Length();
+                _query = query;
             }
 
-            public TModel Current => _mapper.MapToModel<TModel>(_store.ReadRecord(_currentIndex).Fields);
+            public TModel Current => _current;
 
-            object IEnumerator.Current => Current;
+            object IEnumerator.Current => _current;
 
             public bool MoveNext()
             {
-                _currentIndex++;
-                return true;
+                bool recordFound = false;
+
+                while (!recordFound && _currentIndex < _count)
+                {
+                    _currentIndex++;
+                    var record = _store.ReadRecord(_currentIndex);
+                    object[] fieldValues = record.Fields.Select(f => f.Value).ToArray();
+                    _current = _mapper.MapToModel<TModel>(fieldValues);
+                    recordFound = _query.ApplyFilter(_current);
+                }
+
+                return _currentIndex < _count;
             }
 
             public void Reset()

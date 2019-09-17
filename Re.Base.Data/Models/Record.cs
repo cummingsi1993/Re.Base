@@ -6,6 +6,7 @@ namespace Re.Base.Data.Models
 {
     public class Record
     {
+        public RecordHeader Header { get; set; }
 
         public RecordField[] Fields { get; set; }
 

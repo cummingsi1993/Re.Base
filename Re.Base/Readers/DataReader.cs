@@ -58,11 +58,11 @@ namespace Re.Base.Readers
 
                 while (!recordFound && _currentIndex < _count)
                 {
-                    _currentIndex++;
                     var record = _store.ReadRecord(_currentIndex);
                     object[] fieldValues = record.Fields.Select(f => f.Value).ToArray();
                     _current = _mapper.MapToModel<TModel>(fieldValues);
                     recordFound = _query.ApplyFilter(_current);
+                    _currentIndex++;
                 }
 
                 return _currentIndex < _count;

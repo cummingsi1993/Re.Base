@@ -156,6 +156,24 @@ namespace Re.Base.Data.Extensions
 
         }
 
+        public static RecordHeader ReadRecordHeader(this Stream stream)
+        {
+            RecordHeader header = new RecordHeader();
+
+            byte[] headerBytes = new byte[Lengths.RecordHeaderLength];
+
+            stream.Read(headerBytes, 0, Lengths.RecordHeaderLength);
+
+            if (headerBytes[0] != Tokens.RecordBeginToken)
+            {
+                throw new InvalidOperationException();
+            }
+
+            header.IsDeleted = BitConverter.ToBoolean(headerBytes, 1);
+
+            return header;
+        }
+
         public static BlockHeader ReadBlockHeader(this Stream stream)
         {
             byte beginToken = (byte)stream.ReadByte();
@@ -305,6 +323,18 @@ namespace Re.Base.Data.Extensions
             stream.WriteInt64(blockHeader.RecordCount);
         }
 
+        public static void WriteRecordHeader(this Stream stream, RecordHeader recordHeader)
+        {
+            byte[] headerBytes = new byte[Lengths.RecordHeaderLength];
+            MemoryStream headerStream = new MemoryStream(headerBytes);
+
+            headerStream.WriteByte(Tokens.RecordBeginToken);
+            headerStream.WriteBoolean(recordHeader.IsDeleted);
+
+            stream.Write(headerBytes, 0, Lengths.RecordHeaderLength);
+
+        }
+
         #endregion
 
         #region Helper Functions
@@ -341,7 +371,13 @@ namespace Re.Base.Data.Extensions
         {
             var blockContents = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
 
-            fileStream.Position = blockContents + (recordIndex * schema.GetRecordSize());
+            fileStream.Position = blockContents + (recordIndex * (schema.GetRecordSize() + Lengths.RecordHeaderLength));
+        }
+
+        public static void SeekToRecordContents(this Stream fileStream, DataStructure schema, long blockIndex, long recordIndex)
+        {
+            var blockContents = ((Lengths.BlockLength + Lengths.BlockHeaderLength) * (blockIndex + 1)) + Lengths.FileHeaderLength + Lengths.BlockHeaderLength;
+            fileStream.Position = blockContents + (recordIndex * (schema.GetRecordSize() + Lengths.RecordHeaderLength)) + Lengths.RecordHeaderLength;
         }
 
         #endregion

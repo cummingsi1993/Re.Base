@@ -38,7 +38,11 @@ namespace Re.Base.Data.Logic
         protected override Record GetValue(DataStructure schema, FieldTypeFactory fieldTypeFactory, long currentPosition, byte[] bytes)
         {
             Record record = new Record() { Fields = new RecordField[schema.Fields.Count], Location = currentPosition };
+                   
             MemoryStream stream = new MemoryStream(bytes);
+
+            record.Header = stream.ReadRecordHeader();
+
             for (int i = 0; i < schema.Fields.Count; i++)
             {
                 var field = schema.Fields[i];

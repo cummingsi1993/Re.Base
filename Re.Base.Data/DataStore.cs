@@ -250,6 +250,8 @@ namespace Re.Base.Data
             }
 
             _indexManager.AddRecord(fields, insertLocation, _schema);
+
+            _stream.Flush();
         }
 
         public void UpdateRecordAtPointer(long pointer, params object[] fields)

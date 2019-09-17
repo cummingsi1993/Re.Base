@@ -27,7 +27,9 @@ namespace Re.Base.Data.Logic
             _stream.SeekToBlockHeader(index);
             this.BlockHeader = _stream.ReadBlockHeader();
             _fieldTypeFactory = new Creation.FieldTypeFactory();
-            _valueByteSize = _schema.GetRecordSize();
+
+            //TODO: In order to maintain the abstraction here, this should probably be implemented in a subclass.
+            _valueByteSize = _schema.GetRecordSize() + Constants.Lengths.RecordHeaderLength;
         }
 
         private void WriteBlockHeader()
@@ -149,7 +151,7 @@ namespace Re.Base.Data.Logic
         /// <param name="fields"></param>
         public void Update(long index, params object[] fields)
         {
-            _stream.SeekToRecord(_schema, this.Index, index);
+            _stream.SeekToRecordContents(_schema, this.Index, index);
             WriteFields(fields);
         }
 
@@ -163,6 +165,8 @@ namespace Re.Base.Data.Logic
             //TODO : Seek to the next available space, not just the end.
             _stream.SeekToRecord(_schema, BlockHeader.BlockSequence, BlockHeader.RecordCount);
             long recordLocation = _stream.Position;
+
+            _stream.WriteRecordHeader(new RecordHeader() { IsDeleted = false });
 
             this.WriteFields(fields);
 
